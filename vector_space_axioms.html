@@ -232,11 +232,9 @@ const T = {
     holds: 'The axiom holds for your inputs', fails: 'The axiom fails for your inputs',
     neq: 'left side ≠ right side', notin: '{x} ∉ V',
     inputsNotInV: '{list} not in V, so your inputs can’t test this axiom. Pick vectors in V or press Random.',
-    randTitle: 'Random tests',
-    randAll: 'Held in all {n} random tests.', randFail: 'Failed in {f} of {n} random tests. Counterexample:',
-    randNone: 'No random vectors in V were found, so only your inputs were tested.',
+    ceTitle: 'Counterexample', ceText: 'This axiom fails, for example, for:',
     loadCE: 'Load this counterexample',
-    vAllT: 'Looks like a vector space', vAll: 'All 10 axioms held for your inputs and {n} random tests. Tests are evidence, not a proof.',
+    vAllT: 'Looks like a vector space', vAll: 'No axiom failed for these vectors and scalars. A proof still has to show each axiom for every u, v, w in V and every scalar c, d.',
     vFailT: 'Not a vector space', vFail: 'Failing axioms: {list}. A single counterexample is enough.',
     vUnkT: 'Not enough to decide', vUnk: 'Some axioms could not be tested. Choose vectors that belong to V.',
     errFix: 'Fix the formula errors in the Operations panel.', errT: 'Formula error',
@@ -706,7 +704,7 @@ function update() {
     vEl.innerHTML = `<div class="vicon">?</div><div><h2>${t('vUnkT')}</h2><p>${t('vUnk')}</p></div>`;
   } else {
     vEl.className = 'card verdict pass';
-    vEl.innerHTML = `<div class="vicon">✓</div><div><h2>${t('vAllT')}</h2><p>${t('vAll', { n: rand[1].total })}</p></div>`;
+    vEl.innerHTML = `<div class="vicon">✓</div><div><h2>${t('vAllT')}</h2><p>${t('vAll')}</p></div>`;
   }
 
   // chips
@@ -759,18 +757,19 @@ function renderDetail(k, res, rr, o, sc) {
     rEl.innerHTML = `✗ ${t('fails')}: ${why}`;
   }
 
-  let rh = `<h3>${t('randTitle')}</h3>`;
-  if (!rr.total) rh += `<div>${t('randNone')}</div>`;
-  else if (!rr.fails) rh += `<div class="ok-t">✓ ${t('randAll', { n: rr.total })}</div>`;
-  else {
+  // a counterexample is shown only when the axiom fails and the user's own inputs don't already show it
+  let rh = '';
+  if (rr.fails && (res.notIn.length || res.pass)) {
     const ce = rr.ce, n = S.dim;
     const lines = REL[k].split('').map(ch => `<b>${ch}</b> = ${fmtVec(ce[ch].slice(0, n))}`);
     if (k >= 6 && k <= 9) lines.push(`<i>c</i> = ${fmt(ce.c)}` + (k === 8 || k === 9 ? `, <i>d</i> = ${fmt(ce.d)}` : ''));
-    rh += `<div class="bad-t">✗ ${t('randFail', { f: rr.fails, n: rr.total })}</div>
-           <div class="ce">${lines.join('<br>')}</div>
-           <button class="btn" id="loadCE">${t('loadCE')}</button>`;
+    rh = `<h3>${t('ceTitle')}</h3>
+          <div class="bad-t">✗ ${t('ceText')}</div>
+          <div class="ce">${lines.join('<br>')}</div>
+          <button class="btn" id="loadCE">${t('loadCE')}</button>`;
   }
   $('#dRand').innerHTML = rh;
+  $('#dRand').style.display = rh ? '' : 'none';
   const btn = $('#loadCE');
   if (btn) btn.onclick = () => {
     const ce = rr.ce;
