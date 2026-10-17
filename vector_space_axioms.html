@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vector Space Explorer</title>
+<style>
+:root {
+  --bg:#f5f6f8; --panel:#ffffff; --panel2:#f1f3f5; --text:#1d2127; --muted:#5f6773; --border:#dde2e7;
+  --accent:#3b5bdb; --accent-bg:#edf2ff;
+  --ok:#2b8a3e; --ok-bg:#ebfbee; --bad:#c92a2a; --bad-bg:#fff5f5; --unk:#868e96; --unk-bg:#f1f3f5;
+  --grid:#e9ecef; --axis:#9aa3ad; --region:rgba(59,91,219,0.11);
+  --cu:#e8590c; --cv:#1c7ed6; --cw:#2f9e44; --cl:#7048e8; --cr:#e67700; --cg:#868e96;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#111418; --panel:#1a1e24; --panel2:#232930; --text:#e7eaee; --muted:#9aa4b0; --border:#2e353f;
+    --accent:#91a7ff; --accent-bg:rgba(145,167,255,0.12);
+    --ok:#69db7c; --ok-bg:rgba(105,219,124,0.12); --bad:#ff8787; --bad-bg:rgba(255,135,135,0.12); --unk:#9aa4b0; --unk-bg:#232930;
+    --grid:#242a32; --axis:#5f6975; --region:rgba(145,167,255,0.14);
+    --cu:#ff8a4c; --cv:#4dabf7; --cw:#69db7c; --cl:#b197fc; --cr:#ffd43b; --cg:#adb5bd;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#111418; --panel:#1a1e24; --panel2:#232930; --text:#e7eaee; --muted:#9aa4b0; --border:#2e353f;
+  --accent:#91a7ff; --accent-bg:rgba(145,167,255,0.12);
+  --ok:#69db7c; --ok-bg:rgba(105,219,124,0.12); --bad:#ff8787; --bad-bg:rgba(255,135,135,0.12); --unk:#9aa4b0; --unk-bg:#232930;
+  --grid:#242a32; --axis:#5f6975; --region:rgba(145,167,255,0.14);
+  --cu:#ff8a4c; --cv:#4dabf7; --cw:#69db7c; --cl:#b197fc; --cr:#ffd43b; --cg:#adb5bd;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; font-size:15px; line-height:1.45; }
+.wrap { max-width:1320px; margin:0 auto; padding:20px 16px 40px; }
+header.top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
+h1 { margin:0; font-size:26px; letter-spacing:-0.01em; }
+.sub { margin:4px 0 0; color:var(--muted); }
+h2 { margin:0 0 10px; font-size:16px; }
+.tools { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+.seg { display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--panel); }
+.seg button { border:0; background:transparent; color:var(--muted); padding:6px 12px; font:inherit; font-weight:600; cursor:pointer; }
+.seg button.on { background:var(--accent-bg); color:var(--accent); }
+.icon-btn, .btn { border:1px solid var(--border); background:var(--panel); color:var(--text); border-radius:8px; padding:6px 12px; font:inherit; font-weight:600; cursor:pointer; }
+.btn:hover, .icon-btn:hover { border-color:var(--accent); }
+.layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:18px; align-items:start; }
+aside { display:flex; flex-direction:column; gap:18px; min-width:0; }
+main { display:flex; flex-direction:column; gap:18px; min-width:0; }
+.card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.lbl { display:block; font-size:13px; font-weight:600; color:var(--muted); margin:10px 0 6px; }
+select { width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); font:inherit; }
+.desc { margin:8px 0 0; font-size:13.5px; color:var(--muted); }
+details { margin-top:14px; border-top:1px solid var(--border); padding-top:10px; }
+summary { cursor:pointer; font-weight:600; }
+.frow { margin-top:12px; }
+.flabel { font-size:13px; color:var(--muted); margin-bottom:4px; }
+.sym { color:var(--text); font-weight:600; margin-left:4px; }
+.comps { display:flex; align-items:center; gap:4px; color:var(--muted); }
+.comps input { flex:1; min-width:0; }
+input[type=text] { padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:var(--panel2); color:var(--text); font:14px ui-monospace,SFMono-Regular,Menlo,monospace; }
+input[type=text]:focus { outline:2px solid var(--accent); outline-offset:-1px; }
+input.bad { border-color:var(--bad); background:var(--bad-bg); }
+.ferr { color:var(--bad); font-size:12.5px; margin-top:3px; min-height:0; }
+.hint { font-size:12.5px; color:var(--muted); margin:12px 0 0; }
+.row-between { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.row-between h2 { margin:0; }
+.vrow { display:flex; align-items:center; gap:5px; margin-top:10px; color:var(--muted); }
+.vrow input { width:0; flex:1; text-align:center; }
+.vname { font-weight:700; font-size:17px; width:18px; text-align:center; }
+.vname.u { color:var(--cu); } .vname.v { color:var(--cv); } .vname.w { color:var(--cw); }
+.sname { font-style:italic; font-weight:600; color:var(--text); font-size:16px; width:18px; text-align:center; }
+.verdict { display:flex; gap:14px; align-items:flex-start; }
+.verdict .vicon { font-size:22px; line-height:1; width:38px; height:38px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; font-weight:700; }
+.verdict.pass .vicon { background:var(--ok-bg); color:var(--ok); }
+.verdict.fail .vicon { background:var(--bad-bg); color:var(--bad); }
+.verdict.unk .vicon { background:var(--unk-bg); color:var(--unk); }
+.verdict h2 { margin:0 0 2px; }
+.verdict p { margin:0; color:var(--muted); }
+.groups { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.gtitle { font-weight:700; font-style:italic; color:var(--ok); margin-bottom:8px; }
+.chips { display:flex; flex-direction:column; gap:6px; }
+.chip { display:grid; grid-template-columns:22px minmax(0,1fr) auto; gap:8px; align-items:center; text-align:left; border:1px solid var(--border); background:var(--panel); color:var(--text); border-radius:9px; padding:7px 10px; font:inherit; cursor:pointer; }
+.chip:hover { border-color:var(--accent); }
+.chip.sel { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-bg); background:var(--accent-bg); }
+.chip .cn { font-weight:700; color:var(--muted); }
+.chip .cf { font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chip .ct { display:block; font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chip .ci { width:22px; height:22px; border-radius:6px; display:grid; place-items:center; font-weight:700; font-size:13px; }
+.chip.pass .ci { background:var(--ok-bg); color:var(--ok); }
+.chip.fail .ci { background:var(--bad-bg); color:var(--bad); }
+.chip.unk .ci { background:var(--unk-bg); color:var(--unk); }
+.dhead { display:flex; gap:14px; align-items:flex-start; margin-bottom:14px; }
+.dnum { width:40px; height:40px; border-radius:10px; background:var(--accent-bg); color:var(--accent); display:grid; place-items:center; font-weight:800; font-size:18px; flex-shrink:0; }
+.dhead h2 { margin:0; text-transform:none; }
+.stmt { font-size:22px; margin-top:4px; }
+.forevery { font-size:13.5px; color:var(--muted); margin-top:2px; }
+.note { font-size:13px; color:var(--muted); margin-top:4px; }
+.dgrid { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:18px; }
+.canvasWrap { position:relative; width:100%; height:440px; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--panel); }
+canvas { display:block; touch-action:none; }
+.legend { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12.5px; color:var(--muted); margin-top:8px; }
+.legend .sw { display:inline-block; width:18px; height:4px; border-radius:2px; vertical-align:middle; margin-right:5px; }
+.legend .sw.dash { background:repeating-linear-gradient(90deg, var(--cr) 0 5px, transparent 5px 9px) !important; }
+.legend .sw.reg { height:12px; width:14px; background:var(--region); border:1px solid var(--accent); }
+.scal { font-size:15px; margin-bottom:10px; color:var(--muted); }
+.scal i { color:var(--text); }
+.step { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:8px 10px; border-radius:8px; border:1px solid var(--border); margin-bottom:6px; background:var(--panel2); }
+.step.mid { background:transparent; }
+.step .sx { font-size:16px; white-space:nowrap; }
+.step .sv { font:15px ui-monospace,SFMono-Regular,Menlo,monospace; text-align:right; overflow-wrap:anywhere; }
+.tag { font-size:11.5px; font-weight:700; padding:2px 7px; border-radius:20px; white-space:nowrap; }
+.tag.ok { background:var(--ok-bg); color:var(--ok); }
+.tag.bad { background:var(--bad-bg); color:var(--bad); }
+.tag.lhs { background:transparent; color:var(--cl); border:1.5px solid var(--cl); }
+.tag.rhs { background:transparent; color:var(--cr); border:1.5px dashed var(--cr); }
+.result { margin-top:12px; padding:10px 12px; border-radius:9px; font-weight:600; }
+.result.pass { background:var(--ok-bg); color:var(--ok); }
+.result.fail { background:var(--bad-bg); color:var(--bad); }
+.result.unk { background:var(--unk-bg); color:var(--muted); font-weight:500; }
+.rand { margin-top:12px; font-size:14px; color:var(--muted); border-top:1px solid var(--border); padding-top:12px; }
+.rand h3 { margin:0 0 4px; font-size:13px; color:var(--text); }
+.ce { font:14px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--text); margin:6px 0 8px; line-height:1.6; }
+.ok-t { color:var(--ok); font-weight:600; } .bad-t { color:var(--bad); font-weight:600; }
+b { font-weight:700; }
+@media (max-width:1100px) { .dgrid { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:900px) { .layout { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:620px) {
+  .groups { grid-template-columns:minmax(0,1fr); }
+  .dgrid { grid-template-columns:minmax(0,1fr); }
+  .card { padding:14px; }
+  header.top { flex-direction:column; }
+  .canvasWrap { height:340px; }
+  .stmt { font-size:19px; }
+  h1 { font-size:22px; }
+}
+</style>
+</head>
+<body>
+<noscript>
+  <div style="max-width:560px;margin:40px auto;padding:20px;border:1px solid #dde2e7;border-radius:12px;font-family:system-ui,sans-serif;background:#fff;color:#1d2127">
+    <h1 style="font-size:20px;margin:0 0 8px">Vector Space Explorer</h1>
+    <p style="margin:0">This page needs JavaScript. If you opened it as a file preview (Files app, WhatsApp, Mail), open it in Safari or Chrome instead.</p>
+  </div>
+</noscript>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 data-i18n="title"></h1>
+      <p class="sub" data-i18n="subtitle"></p>
+    </div>
+    <div class="tools">
+      <button class="icon-btn" id="themeBtn" aria-label="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <section class="card">
+        <h2 data-i18n="space"></h2>
+        <label class="lbl" for="preset" data-i18n="example"></label>
+        <select id="preset"></select>
+        <p class="desc" id="presetDesc"></p>
+        <span class="lbl" data-i18n="dimension"></span>
+        <div class="seg" id="dimSeg"><button data-dim="2">ℝ²</button><button data-dim="3">ℝ³</button></div>
+        <details id="opsBox">
+          <summary data-i18n="operations"></summary>
+          <div id="opsFields"></div>
+          <p class="hint" data-i18n="formulaHint"></p>
+        </details>
+      </section>
+      <section class="card">
+        <div class="row-between"><h2 data-i18n="vectors"></h2><button class="btn" id="randBtn" data-i18n="random"></button></div>
+        <div id="vecFields"></div>
+        <p class="hint" data-i18n="scalarHint"></p>
+        <p class="hint" id="interactHint"></p>
+      </section>
+    </aside>
+
+    <main>
+      <section class="card verdict" id="verdict"></section>
+      <section class="card"><div class="groups" id="chips"></div></section>
+      <section class="card" id="detail">
+        <div class="dhead">
+          <div class="dnum" id="dNum"></div>
+          <div>
+            <h2 id="dName"></h2>
+            <div class="stmt" id="dStmt"></div>
+            <div class="forevery" id="dEvery"></div>
+            <div class="note" id="dNote"></div>
+          </div>
+        </div>
+        <div class="dgrid">
+          <div>
+            <div class="canvasWrap" id="cw"><canvas id="cv" aria-label="Plot of the vectors in this axiom"></canvas></div>
+            <div class="legend" id="legend"></div>
+          </div>
+          <div>
+            <div class="scal" id="dScal"></div>
+            <div id="dSteps"></div>
+            <div class="result" id="dResult"></div>
+            <div class="rand" id="dRand"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+// ---------- storage (optional) ----------
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+
+// ---------- text ----------
+const T = {
+  en: {
+    title: 'Vector Space Explorer',
+    subtitle: '§3.2 Vector Spaces · test the 10 axioms with your own vectors and operations',
+    space: 'The set V', example: 'Example', customEdited: 'Custom (edited)', dimension: 'Dimension',
+    operations: 'Operations', opAdd: 'Vector addition', opSmul: 'Scalar multiplication', opZero: 'Zero vector',
+    opNeg: 'Additive inverse', opSet: 'Set condition', setPh: 'empty = all of ℝⁿ',
+    formulaHint: 'Variables: u1, u2, u3, v1, v2, v3 and c. In the set condition use x, y, z. Operators: + − * / ^, comparisons < <= > >= =, and, or. Functions: sqrt, abs, exp, ln, sin, cos.',
+    vectors: 'Vectors and scalars', random: 'Random',
+    scalarHint: 'Fields accept expressions such as 1/2 or sqrt(2).',
+    dragHint: 'Drag the arrow tips of u, v, w on the plot (hold Shift for finer steps).',
+    rotateHint: 'Drag the plot to rotate it.',
+    groupAdd: 'Vector Addition', groupMul: 'Scalar Multiplication', axiom: 'Axiom',
+    forEvery: 'for every <b>u</b>, <b>v</b>, <b>w</b> in <i>V</i> and every scalar <i>c</i>, <i>d</i>',
+    customNote: '⊕ and ⊙ are the operations defined in the Operations panel.',
+    legend: 'Solid: left side · Dashed: right side', shaded: 'Shaded: the set V',
+    lhs: 'left', rhs: 'right', undef: 'undefined',
+    holds: 'The axiom holds for your inputs', fails: 'The axiom fails for your inputs',
+    neq: 'left side ≠ right side', notin: '{x} ∉ V',
+    inputsNotInV: '{list} not in V, so your inputs can’t test this axiom. Pick vectors in V or press Random.',
+    randTitle: 'Random tests',
+    randAll: 'Held in all {n} random tests.', randFail: 'Failed in {f} of {n} random tests. Counterexample:',
+    randNone: 'No random vectors in V were found, so only your inputs were tested.',
+    loadCE: 'Load this counterexample',
+    vAllT: 'Looks like a vector space', vAll: 'All 10 axioms held for your inputs and {n} random tests. Tests are evidence, not a proof.',
+    vFailT: 'Not a vector space', vFail: 'Failing axioms: {list}. A single counterexample is enough.',
+    vUnkT: 'Not enough to decide', vUnk: 'Some axioms could not be tested. Choose vectors that belong to V.',
+    errFix: 'Fix the formula errors in the Operations panel.', errT: 'Formula error',
+    errChar: 'Unexpected character “{ch}”', errName: 'Unknown name “{name}”', errEnd: 'The expression ends too early',
+    errExpect: 'Expected “{tk}”', errUnexp: 'Unexpected “{tk}”', errEmpty: 'Empty field',
+    names: ['closure under addition', 'commutative property', 'associative property', 'additive identity', 'additive inverse',
+            'closure under scalar multiplication', 'left distributive property', 'right distributive property', 'associative property', 'scalar identity']
+  }
+};
+
+function t(key, vars) {
+  let s = T.en[key] ?? key;
+  if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
+  return s;
+}
+
+// ---------- examples ----------
+const STD = { add: ['u1+v1', 'u2+v2', 'u3+v3'], smul: ['c*u1', 'c*u2', 'c*u3'], zero: ['0', '0', '0'], neg: ['-u1', '-u2', '-u3'], cond: '' };
+const PRESETS = [
+  { id: 'standard',
+    name: 'Standard ℝⁿ',
+    desc: 'Usual vector addition and scalar multiplication.' },
+  { id: 'quadrant',
+    name: 'First quadrant: x ≥ 0, y ≥ 0',
+    desc: 'Usual operations, but V contains only vectors with non-negative components.',
+    f: { cond: 'x >= 0 and y >= 0' }, inputs: { u: [2, 1], v: [1, 3], w: [3, 0.5], c: 2, d: 1 } },
+  { id: 'line',
+    name: 'Line through the origin: y = 2x',
+    desc: 'Usual operations on the points of the line y = 2x.',
+    f: { cond: 'y = 2x' }, inputs: { u: [1, 2], v: [-2, -4], w: [1.5, 3], c: 2, d: -1 } },
+  { id: 'line1',
+    name: 'Line not through the origin: y = 2x + 1',
+    desc: 'Usual operations on the points of the line y = 2x + 1.',
+    f: { cond: 'y = 2x + 1' }, inputs: { u: [0, 1], v: [1, 3], w: [-1, -1], c: 2, d: -1 } },
+  { id: 'flatten',
+    name: 'ℝ² with c ⊙ (x, y) = (cx, 0)',
+    desc: 'Usual addition; scalar multiplication drops the second component.',
+    f: { smul: ['c*u1', '0'] }, inputs: { u: [2, 1], v: [-1, 2], w: [1, -2], c: 2, d: -1 } },
+  { id: 'shifted',
+    name: 'ℝ² with shifted operations',
+    desc: 'u ⊕ v = (u₁+v₁+1, u₂+v₂+1) and c ⊙ u = (cu₁+c−1, cu₂+c−1). The zero vector is (−1, −1).',
+    f: { add: ['u1+v1+1', 'u2+v2+1'], smul: ['c*u1+c-1', 'c*u2+c-1'], zero: ['-1', '-1'], neg: ['-u1-2', '-u2-2'] },
+    inputs: { u: [2, 1], v: [-1, 2], w: [1, -2], c: 2, d: -1 } },
+  { id: 'posmul',
+    name: 'Positive quadrant, multiplication as addition',
+    desc: 'On x > 0, y > 0: u ⊕ v = (u₁v₁, u₂v₂) and c ⊙ u = (u₁ᶜ, u₂ᶜ). The zero vector is (1, 1).',
+    f: { add: ['u1*v1', 'u2*v2'], smul: ['u1^c', 'u2^c'], zero: ['1', '1'], neg: ['1/u1', '1/u2'], cond: 'x > 0 and y > 0' },
+    inputs: { u: [2, 3], v: [0.5, 2], w: [4, 1], c: 2, d: -1 } }
+];
+
+// ---------- state ----------
+const S = {
+  dim: 2, preset: 'standard',
+  f: JSON.parse(JSON.stringify(STD)),
+  u: [2, 1, 2], v: [-1, 2, 1], w: [1, -2, 1], c: 2, d: -1,
+  sel: 1,
+  view: { yaw: -2.25, pitch: 0.42 }
+};
+let LAST = null, DRAG = null, ROT = null, HITS = [], VIEW2 = null;
+
+// ---------- expression parser ----------
+const FUNCS = { sqrt: Math.sqrt, abs: Math.abs, exp: Math.exp, ln: Math.log, log: Math.log10, sin: Math.sin, cos: Math.cos, tan: Math.tan, min: Math.min, max: Math.max };
+const CONSTS = { pi: Math.PI, e: Math.E };
+const CMP = ['<', '<=', '>', '>=', '==', '!='];
+
+function compile(src, vars) {
+  src = String(src);
+  const toks = [], re = /\s*(\d*\.\d+|\d+\.?\d*|[A-Za-z_]\w*|<=|>=|==|!=|&&|\|\||[-+*\/^(),<>=≤≥·×−])/y;
+  let i = 0;
+  while (!/^\s*$/.test(src.slice(i))) {
+    re.lastIndex = i;
+    const m = re.exec(src);
+    if (!m) throw new Error(t('errChar', { ch: src.slice(i).trim()[0] }));
+    i = re.lastIndex;
+    const tk = m[1];
+    toks.push({ '≤': '<=', '≥': '>=', '·': '*', '×': '*', '−': '-', '=': '==', and: '&&', or: '||' }[tk] || tk);
+  }
+  if (!toks.length) throw new Error(t('errEmpty'));
+  let p = 0;
+  const peek = () => toks[p], next = () => toks[p++];
+  const isNum = tk => tk !== undefined && /^[\d.]/.test(tk);
+  const isId = tk => tk !== undefined && /^[A-Za-z_]/.test(tk) && tk !== 'and' && tk !== 'or';
+  const expect = tk => { if (toks[p] !== tk) throw new Error(t('errExpect', { tk })); p++; };
+
+  function orE() { let a = andE(); while (peek() === '||') { next(); const l = a, r = andE(); a = e => (l(e) || r(e)) ? 1 : 0; } return a; }
+  function andE() { let a = cmpE(); while (peek() === '&&') { next(); const l = a, r = cmpE(); a = e => (l(e) && r(e)) ? 1 : 0; } return a; }
+  function cmpE() {
+    const terms = [addE()], ops = [];
+    while (CMP.includes(peek())) { ops.push(next()); terms.push(addE()); }
+    if (!ops.length) return terms[0];
+    return e => {
+      let x = terms[0](e);
+      for (let k = 0; k < ops.length; k++) {
+        const y = terms[k + 1](e);
+        const tol = e.$tol ?? 1e-9 * (1 + Math.abs(x) + Math.abs(y));
+        const ok = ops[k] === '<' ? x < y : ops[k] === '<=' ? x <= y + tol : ops[k] === '>' ? x > y
+                 : ops[k] === '>=' ? x >= y - tol : ops[k] === '==' ? Math.abs(x - y) <= tol : Math.abs(x - y) > tol;
+        if (!ok) return 0;
+        x = y;
+      }
+      return 1;
+    };
+  }
+  function addE() {
+    let a = mulE();
+    while (peek() === '+' || peek() === '-') {
+      const op = next(), l = a, r = mulE();
+      a = op === '+' ? e => l(e) + r(e) : e => l(e) - r(e);
+    }
+    return a;
+  }
+  function mulE() {
+    let a = unaryE();
+    for (;;) {
+      const tk = peek();
+      if (tk === '*' || tk === '/') {
+        next(); const l = a, r = unaryE();
+        a = tk === '*' ? e => l(e) * r(e) : e => l(e) / r(e);
+      } else if (isNum(tk) || isId(tk) || tk === '(') {   // implicit multiplication: 2x, 3(u1+1)
+        const l = a, r = unaryE(); a = e => l(e) * r(e);
+      } else break;
+    }
+    return a;
+  }
+  function unaryE() {
+    if (peek() === '-') { next(); const a = unaryE(); return e => -a(e); }
+    if (peek() === '+') { next(); return unaryE(); }
+    return powE();
+  }
+  function powE() {
+    const b = primary();
+    if (peek() === '^') { next(); const x = unaryE(); return e => Math.pow(b(e), x(e)); }
+    return b;
+  }
+  function primary() {
+    const tk = next();
+    if (tk === undefined) throw new Error(t('errEnd'));
+    if (isNum(tk)) { const v = parseFloat(tk); return () => v; }
+    if (tk === '(') { const a = orE(); expect(')'); return a; }
+    if (isId(tk)) {
+      if (FUNCS[tk]) {
+        expect('(');
+        const args = [orE()];
+        while (peek() === ',') { next(); args.push(orE()); }
+        expect(')');
+        const f = FUNCS[tk];
+        return e => f(...args.map(g => g(e)));
+      }
+      if (tk in CONSTS) { const v = CONSTS[tk]; return () => v; }
+      if (vars.includes(tk)) return e => e[tk];
+      throw new Error(t('errName', { name: tk }));
+    }
+    throw new Error(t('errUnexp', { tk }));
+  }
+  const fn = orE();
+  if (p < toks.length) throw new Error(t('errUnexp', { tk: toks[p] }));
+  return fn;
+}
+
+function evalNumber(src) {
+  const v = compile(src, [])({});
+  if (!Number.isFinite(v)) throw new Error(t('undef'));
+  return v;
+}
+
+// ---------- operations ----------
+const range = n => Array.from({ length: n }, (_, i) => i);
+
+function buildOps() {
+  const n = S.dim, errs = {};
+  const uv = range(n).map(i => 'u' + (i + 1)), vv = range(n).map(i => 'v' + (i + 1));
+  const condVars = ['x', 'y', 'z'].slice(0, n).concat(range(n).map(i => 'x' + (i + 1)));
+  const comp = (key, i, vars) => { try { return compile(S.f[key][i], vars); } catch (err) { errs[key] = errs[key] || err.message; return null; } };
+  const add = range(n).map(i => comp('add', i, [...uv, ...vv]));
+  const smul = range(n).map(i => comp('smul', i, ['c', ...uv]));
+  const zero = range(n).map(i => comp('zero', i, []));
+  const neg = range(n).map(i => comp('neg', i, uv));
+  let cond = null;
+  if (S.f.cond.trim()) { try { cond = compile(S.f.cond, condVars); } catch (err) { errs.cond = err.message; } }
+  if (Object.keys(errs).length) return { errs };
+  const env = (a, b) => { const e = {}; for (let i = 0; i < n; i++) { e['u' + (i + 1)] = a[i]; if (b) e['v' + (i + 1)] = b[i]; } return e; };
+  return {
+    errs,
+    add: (a, b) => { const e = env(a, b); return add.map(f => f(e)); },
+    smul: (k, a) => { const e = env(a); e.c = k; return smul.map(f => f(e)); },
+    zero: () => zero.map(f => f({})),
+    neg: a => { const e = env(a); return neg.map(f => f(e)); },
+    inV: (a, tol) => {
+      if (!a.every(Number.isFinite)) return false;
+      if (!cond) return true;
+      const e = { $tol: tol };
+      for (let i = 0; i < n; i++) { e[['x', 'y', 'z'][i]] = a[i]; e['x' + (i + 1)] = a[i]; }
+      return !!cond(e);
+    },
+    std: ['add', 'smul', 'zero', 'neg'].every(key => range(n).every(i => S.f[key][i].replace(/\s/g, '') === STD[key][i])),
+    hasCond: !!cond
+  };
+}
+
+function eq(a, b) {
+  return a.length === b.length && a.every((x, i) => Number.isFinite(x) && Number.isFinite(b[i]) &&
+    Math.abs(x - b[i]) <= 1e-7 * (1 + Math.max(Math.abs(x), Math.abs(b[i]))));
+}
+
+// ---------- notation ----------
+// mini notation: u v w bold, c d italic, + vector addition, . scalar multiplication,
+// & real addition of scalars, O zero vector, ~ minus sign
+function fmtTpl(tpl, html, compact) {
+  const custom = !(LAST && LAST.ops && LAST.ops.std);
+  let out = '';
+  for (const ch of tpl) {
+    if ('uvw'.includes(ch)) out += html ? `<b>${ch}</b>` : ch;
+    else if ('cd'.includes(ch)) out += html ? `<i>${ch}</i>` : ch;
+    else if (ch === '+') out += custom ? (compact ? '⊕' : ' ⊕ ') : (compact ? '+' : ' + ');
+    else if (ch === '.') out += custom ? (compact ? '⊙' : ' ⊙ ') : '';
+    else if (ch === '&') out += compact ? '+' : ' + ';
+    else if (ch === 'O') out += html ? '<b>0</b>' : '0';
+    else if (ch === '~') out += '−';
+    else if (ch === '=') out += ' = ';
+    else if (ch === '∈') out += ' ∈ ';
+    else if (ch === 'V') out += html ? '<i>V</i>' : 'V';
+    else out += ch;
+  }
+  return out;
+}
+function fmt(x) {
+  if (!Number.isFinite(x)) return t('undef');
+  let r = Math.round(x * 1e4) / 1e4;
+  if (Object.is(r, -0)) r = 0;
+  return String(r).replace('-', '−');
+}
+const fmtPlain = x => { let r = Math.round(x * 1e4) / 1e4; if (Object.is(r, -0)) r = 0; return String(r); };
+const fmtVec = a => '(' + a.map(fmt).join(', ') + ')';
+
+// ---------- axioms ----------
+const STMT = { 1: 'u+v∈V', 2: 'u+v=v+u', 3: '(u+v)+w=u+(v+w)', 4: 'u+O=u', 5: 'u+(~u)=O',
+               6: 'c.u∈V', 7: 'c.(u+v)=c.u+c.v', 8: '(c&d).u=c.u+d.u', 9: 'c.(d.u)=(cd).u', 10: '1.u=u' };
+const REL = { 1: 'uv', 2: 'uv', 3: 'uvw', 4: 'u', 5: 'u', 6: 'u', 7: 'uv', 8: 'u', 9: 'u', 10: 'u' };
+const STY = {
+  IN: { w: 2.5 }, LHS: { w: 5, alpha: 0.8, side: 1 }, RHS: { w: 2.5, dash: true, side: -1 },
+  GUIDE: { w: 1.5, dash: true, alpha: 0.55, nolabel: true }, MID: { w: 2, alpha: 0.5 }
+};
+
+function evalAxiom(k, o, u, v, w, c, d, withDraw) {
+  const n = u.length, O = new Array(n).fill(0), steps = [], items = [], reasons = [];
+  const st = (tpl, val, role) => steps.push({ tpl, val, role });
+  const ar = (from, to, col, tpl, sty, extra) => { if (withDraw) items.push({ from, to, col, tpl, ...sty, ...extra }); };
+  const need = (tpl, x) => { const ok = o.inV(x); if (!ok) reasons.push({ type: 'notin', tpl }); return ok; };
+  const same = (a, b) => { const ok = eq(a, b); if (!ok) reasons.push({ type: 'neq' }); return ok; };
+  const inU = () => ar(O, u, 'u', 'u', STY.IN, { drag: 'u' });
+  const inV_ = () => ar(O, v, 'v', 'v', STY.IN, { drag: 'v' });
+  let pass;
+  switch (k) {
+    case 1: {
+      const s = o.add(u, v);
+      st('u+v', s, 'mem');
+      if (o.std) ar(u, s, 'v', '', STY.GUIDE);
+      ar(O, s, 'l', 'u+v', STY.LHS); inU(); inV_();
+      pass = need('u+v', s); break;
+    }
+    case 2: {
+      const a = o.add(u, v), b = o.add(v, u);
+      st('u+v', a, 'lhs'); st('v+u', b, 'rhs');
+      if (o.std) { ar(u, a, 'v', '', STY.GUIDE); ar(v, b, 'u', '', STY.GUIDE); }
+      ar(O, a, 'l', 'u+v', STY.LHS); inU(); inV_(); ar(O, b, 'r', 'v+u', STY.RHS);
+      pass = same(a, b); break;
+    }
+    case 3: {
+      const uv = o.add(u, v), L = o.add(uv, w), vw = o.add(v, w), R = o.add(u, vw);
+      st('u+v', uv, 'mid'); st('(u+v)+w', L, 'lhs'); st('v+w', vw, 'mid'); st('u+(v+w)', R, 'rhs');
+      if (o.std) { ar(u, uv, 'v', '', STY.GUIDE); ar(uv, L, 'w', '', STY.GUIDE); ar(u, R, 'g', '', STY.GUIDE); }
+      ar(O, uv, 'g', 'u+v', STY.MID); ar(O, vw, 'g', 'v+w', STY.MID);
+      ar(O, L, 'l', '(u+v)+w', STY.LHS); inU(); inV_(); ar(O, w, 'w', 'w', STY.IN, { drag: 'w' });
+      ar(O, R, 'r', 'u+(v+w)', STY.RHS);
+      pass = same(L, R); break;
+    }
+    case 4: {
+      const z = o.zero(), L = o.add(u, z);
+      st('O', z, 'mem'); st('u+O', L, 'lhs'); st('u', u, 'rhs');
+      ar(O, z, 'g', 'O', STY.MID); ar(O, L, 'l', 'u+O', STY.LHS); ar(O, u, 'u', 'u', STY.RHS, { drag: 'u' });
+      const a = need('O', z), b = same(L, u); pass = a && b; break;
+    }
+    case 5: {
+      const nu = o.neg(u), L = o.add(u, nu), z = o.zero();
+      st('~u', nu, 'mem'); st('u+(~u)', L, 'lhs'); st('O', z, 'rhs');
+      if (o.std) ar(u, L, 'w', '', STY.GUIDE);
+      ar(O, L, 'l', 'u+(~u)', STY.LHS); inU(); ar(O, nu, 'w', '~u', STY.IN); ar(O, z, 'r', 'O', STY.RHS);
+      const a = need('~u', nu), b = same(L, z); pass = a && b; break;
+    }
+    case 6: {
+      const p = o.smul(c, u);
+      st('c.u', p, 'mem');
+      ar(O, p, 'l', 'c.u', STY.LHS); inU();
+      pass = need('c.u', p); break;
+    }
+    case 7: {
+      const s = o.add(u, v), L = o.smul(c, s), cu = o.smul(c, u), cv = o.smul(c, v), R = o.add(cu, cv);
+      st('u+v', s, 'mid'); st('c.(u+v)', L, 'lhs'); st('c.u', cu, 'mid'); st('c.v', cv, 'mid'); st('c.u+c.v', R, 'rhs');
+      if (o.std) ar(cu, R, 'v', '', STY.GUIDE);
+      ar(O, s, 'g', 'u+v', STY.MID); ar(O, cu, 'u', 'c.u', STY.MID); ar(O, cv, 'v', 'c.v', STY.MID);
+      ar(O, L, 'l', 'c.(u+v)', STY.LHS); inU(); inV_(); ar(O, R, 'r', 'c.u+c.v', STY.RHS);
+      pass = same(L, R); break;
+    }
+    case 8: {
+      const L = o.smul(c + d, u), cu = o.smul(c, u), du = o.smul(d, u), R = o.add(cu, du);
+      st('(c&d).u', L, 'lhs'); st('c.u', cu, 'mid'); st('d.u', du, 'mid'); st('c.u+d.u', R, 'rhs');
+      if (o.std) ar(cu, R, 'g', '', STY.GUIDE);
+      ar(O, cu, 'g', 'c.u', STY.MID); ar(O, du, 'g', 'd.u', STY.MID);
+      ar(O, L, 'l', '(c&d).u', STY.LHS); inU(); ar(O, R, 'r', 'c.u+d.u', STY.RHS);
+      pass = same(L, R); break;
+    }
+    case 9: {
+      const du = o.smul(d, u), L = o.smul(c, du), R = o.smul(c * d, u);
+      st('d.u', du, 'mid'); st('c.(d.u)', L, 'lhs'); st('(cd).u', R, 'rhs');
+      ar(O, du, 'g', 'd.u', STY.MID); ar(O, L, 'l', 'c.(d.u)', STY.LHS); inU(); ar(O, R, 'r', '(cd).u', STY.RHS);
+      pass = same(L, R); break;
+    }
+    case 10: {
+      const L = o.smul(1, u);
+      st('1.u', L, 'lhs'); st('u', u, 'rhs');
+      ar(O, L, 'l', '1.u', STY.LHS); ar(O, u, 'u', 'u', STY.RHS, { drag: 'u' });
+      pass = same(L, u); break;
+    }
+  }
+  return { steps, items, pass, reasons };
+}
+
+// ---------- random tests ----------
+function rng(seed) {
+  return function () {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let q = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    q = (q + Math.imul(q ^ (q >>> 7), 61 | q)) ^ q;
+    return ((q ^ (q >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const POOL = [-5, -4, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5];
+const SPOOL = [-3, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 3];
+const pick = (r, a) => a[Math.floor(r() * a.length)];
+
+function sampleVec(r, n, base) {
+  // half of the samples are combinations of the user's vectors, so sets like the line y = 2x get hits
+  if (base && r() < 0.5) {
+    const a = pick(r, SPOOL), b = pick(r, SPOOL), g = pick(r, SPOOL);
+    return range(n).map(i => a * base[0][i] + b * base[1][i] + g * base[2][i]);
+  }
+  return range(n).map(() => pick(r, POOL));
+}
+
+function randomTests(o, base) {
+  const r = rng(20260317), n = S.dim, triples = [];
+  for (let tries = 0; tries < 6000 && triples.length < 300; tries++) {
+    const u = sampleVec(r, n, base), v = sampleVec(r, n, base), w = sampleVec(r, n, base);
+    if (o.inV(u) && o.inV(v) && o.inV(w)) triples.push({ u, v, w, c: pick(r, SPOOL), d: pick(r, SPOOL) });
+  }
+  const out = {};
+  for (let k = 1; k <= 10; k++) {
+    let fails = 0, ce = null;
+    for (const s of triples) {
+      if (!evalAxiom(k, o, s.u, s.v, s.w, s.c, s.d, false).pass) { fails++; if (!ce) ce = s; }
+    }
+    out[k] = { total: triples.length, fails, ce };
+  }
+  return out;
+}
+
+// ---------- UI: fields ----------
+const $ = s => document.querySelector(s);
+
+function buildPresetSelect() {
+  const sel = $('#preset');
+  let html = PRESETS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  if (S.preset === 'custom') html += `<option value="custom">${t('customEdited')}</option>`;
+  sel.innerHTML = html;
+  sel.value = S.preset;
+  const p = PRESETS.find(p => p.id === S.preset);
+  $('#presetDesc').textContent = p ? p.desc : '';
+}
+
+function buildFields() {
+  const n = S.dim;
+  const comps = key => '( ' + range(n).map(i =>
+    `<input type="text" spellcheck="false" autocomplete="off" data-f="${key}" data-i="${i}" value="${S.f[key][i]}">`).join(' , ') + ' )';
+  const vars = n === 2 ? '(x, y)' : '(x, y, z)';
+  $('#opsFields').innerHTML = `
+    <div class="frow"><div class="flabel">${t('opAdd')} <span class="sym">u ⊕ v =</span></div><div class="comps">${comps('add')}</div><div class="ferr" id="err-add"></div></div>
+    <div class="frow"><div class="flabel">${t('opSmul')} <span class="sym">c ⊙ u =</span></div><div class="comps">${comps('smul')}</div><div class="ferr" id="err-smul"></div></div>
+    <div class="frow"><div class="flabel">${t('opZero')} <span class="sym">0 =</span></div><div class="comps">${comps('zero')}</div><div class="ferr" id="err-zero"></div></div>
+    <div class="frow"><div class="flabel">${t('opNeg')} <span class="sym">−u =</span></div><div class="comps">${comps('neg')}</div><div class="ferr" id="err-neg"></div></div>
+    <div class="frow"><div class="flabel">${t('opSet')} <span class="sym">V = { ${vars} :</span></div>
+      <div class="comps"><input type="text" spellcheck="false" autocomplete="off" data-f="cond" value="${S.f.cond.replace(/"/g, '&quot;')}" placeholder="${t('setPh')}"> }</div>
+      <div class="ferr" id="err-cond"></div></div>`;
+
+  const vrow = name => `<div class="vrow"><span class="vname ${name}">${name}</span> = ( ` +
+    range(n).map(i => `<input type="text" spellcheck="false" autocomplete="off" data-vec="${name}" data-i="${i}" value="${fmtPlain(S[name][i])}">`).join(' , ') + ' )</div>';
+  $('#vecFields').innerHTML = vrow('u') + vrow('v') + vrow('w') +
+    `<div class="vrow"><span class="sname">c</span> = <input type="text" spellcheck="false" data-sc="c" value="${fmtPlain(S.c)}">
+     <span class="sname">d</span> = <input type="text" spellcheck="false" data-sc="d" value="${fmtPlain(S.d)}"></div>`;
+  $('#interactHint').textContent = n === 2 ? t('dragHint') : t('rotateHint');
+  document.querySelectorAll('#dimSeg button').forEach(b => b.classList.toggle('on', +b.dataset.dim === n));
+}
+
+function syncVecFields() {
+  document.querySelectorAll('[data-vec]').forEach(el => {
+    if (el !== document.activeElement) { el.value = fmtPlain(S[el.dataset.vec][+el.dataset.i]); el.classList.remove('bad'); }
+  });
+  document.querySelectorAll('[data-sc]').forEach(el => {
+    if (el !== document.activeElement) { el.value = fmtPlain(S[el.dataset.sc]); el.classList.remove('bad'); }
+  });
+}
+
+function applyPreset(id) {
+  const p = PRESETS.find(p => p.id === id);
+  S.preset = id;
+  S.f = JSON.parse(JSON.stringify(STD));
+  if (p.f) for (const key in p.f) {
+    if (key === 'cond') S.f.cond = p.f.cond;
+    else p.f[key].forEach((x, i) => { S.f[key][i] = x; });
+  }
+  if (p.inputs) {
+    S.dim = 2;
+    ['u', 'v', 'w'].forEach(k => { S[k] = [...p.inputs[k], 0]; });
+    S.c = p.inputs.c; S.d = p.inputs.d;
+  }
+  $('#opsBox').open = id !== 'standard';
+}
+
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.title = t('title');
+}
+
+// ---------- UI: update ----------
+function update() {
+  const o = buildOps();
+  ['add', 'smul', 'zero', 'neg', 'cond'].forEach(key => {
+    const el = $('#err-' + key); if (el) el.textContent = o.errs[key] ? t('errT') + ': ' + o.errs[key] : '';
+    document.querySelectorAll(`[data-f="${key}"]`).forEach(inp => inp.classList.toggle('bad', !!o.errs[key]));
+  });
+  if (Object.keys(o.errs).length) {
+    $('#opsBox').open = true;
+    $('#verdict').className = 'card verdict fail';
+    $('#verdict').innerHTML = `<div class="vicon">!</div><div><h2>${t('errT')}</h2><p>${t('errFix')}</p></div>`;
+    LAST = null; drawCanvas();
+    return;
+  }
+  const n = S.dim, u = S.u.slice(0, n), v = S.v.slice(0, n), w = S.w.slice(0, n), c = S.c, d = S.d;
+  const vecs = { u, v, w };
+  LAST = { ops: o };
+  const rand = randomTests(o, [u, v, w]);
+  const status = {}, results = {};
+  for (let k = 1; k <= 10; k++) {
+    const res = evalAxiom(k, o, u, v, w, c, d, k === S.sel);
+    const notIn = REL[k].split('').filter(ch => !o.inV(vecs[ch]));
+    const rr = rand[k];
+    res.notIn = notIn;
+    results[k] = res;
+    status[k] = ((!notIn.length && !res.pass) || rr.fails > 0) ? 'fail' : (!notIn.length || rr.total > 0) ? 'pass' : 'unk';
+  }
+  LAST.items = results[S.sel].items;
+
+  // verdict
+  const failing = range(10).map(i => i + 1).filter(k => status[k] === 'fail');
+  const unknown = range(10).map(i => i + 1).filter(k => status[k] === 'unk');
+  const vEl = $('#verdict');
+  if (failing.length) {
+    vEl.className = 'card verdict fail';
+    vEl.innerHTML = `<div class="vicon">✗</div><div><h2>${t('vFailT')}</h2><p>${t('vFail', { list: failing.join(', ') })}</p></div>`;
+  } else if (unknown.length) {
+    vEl.className = 'card verdict unk';
+    vEl.innerHTML = `<div class="vicon">?</div><div><h2>${t('vUnkT')}</h2><p>${t('vUnk')}</p></div>`;
+  } else {
+    vEl.className = 'card verdict pass';
+    vEl.innerHTML = `<div class="vicon">✓</div><div><h2>${t('vAllT')}</h2><p>${t('vAll', { n: rand[1].total })}</p></div>`;
+  }
+
+  // chips
+  const chip = k => `<button class="chip ${status[k]} ${k === S.sel ? 'sel' : ''}" data-k="${k}">
+      <span class="cn">${k}</span>
+      <span><span class="cf">${fmtTpl(STMT[k], true)}</span><span class="ct">${T.en.names[k - 1]}</span></span>
+      <span class="ci">${status[k] === 'pass' ? '✓' : status[k] === 'fail' ? '✗' : '?'}</span></button>`;
+  $('#chips').innerHTML =
+    `<div><div class="gtitle">${t('groupAdd')}</div><div class="chips">${[1, 2, 3, 4, 5].map(chip).join('')}</div></div>
+     <div><div class="gtitle">${t('groupMul')}</div><div class="chips">${[6, 7, 8, 9, 10].map(chip).join('')}</div></div>`;
+
+  renderDetail(S.sel, results[S.sel], rand[S.sel], o, { c, d });
+  drawCanvas();
+}
+
+function renderDetail(k, res, rr, o, sc) {
+  $('#dNum').textContent = k;
+  $('#dName').textContent = `${t('axiom')} ${k} · ${T.en.names[k - 1]}`;
+  $('#dStmt').innerHTML = fmtTpl(STMT[k], true);
+  $('#dEvery').innerHTML = t('forEvery');
+  $('#dNote').textContent = o.std ? '' : t('customNote');
+
+  let scal = '';
+  if (k >= 6 && k <= 9) {
+    scal = `<i>c</i> = ${fmt(sc.c)}`;
+    if (k === 8 || k === 9) scal += ` &nbsp; <i>d</i> = ${fmt(sc.d)}`;
+    if (k === 8) scal += ` &nbsp; <i>c</i> + <i>d</i> = ${fmt(sc.c + sc.d)}`;
+    if (k === 9) scal += ` &nbsp; <i>cd</i> = ${fmt(sc.c * sc.d)}`;
+  }
+  $('#dScal').innerHTML = scal;
+
+  $('#dSteps').innerHTML = res.steps.map(s => {
+    let tag = '';
+    if (s.role === 'mem') tag = o.inV(s.val) ? '<span class="tag ok">∈ V</span>' : '<span class="tag bad">∉ V</span>';
+    else if (s.role === 'lhs') tag = `<span class="tag lhs">${t('lhs')}</span>`;
+    else if (s.role === 'rhs') tag = `<span class="tag rhs">${t('rhs')}</span>`;
+    return `<div class="step ${s.role}"><div class="sx">${fmtTpl(s.tpl, true)}</div><div class="sv">= ${fmtVec(s.val)}</div>${tag || '<span></span>'}</div>`;
+  }).join('');
+
+  const rEl = $('#dResult');
+  if (res.notIn.length) {
+    rEl.className = 'result unk';
+    rEl.innerHTML = t('inputsNotInV', { list: res.notIn.map(x => `<b>${x}</b>`).join(', ') });
+  } else if (res.pass) {
+    rEl.className = 'result pass';
+    rEl.innerHTML = '✓ ' + t('holds');
+  } else {
+    const why = res.reasons.map(r => r.type === 'neq' ? t('neq') : t('notin', { x: fmtTpl(r.tpl, true) })).join(', ');
+    rEl.className = 'result fail';
+    rEl.innerHTML = `✗ ${t('fails')}: ${why}`;
+  }
+
+  let rh = `<h3>${t('randTitle')}</h3>`;
+  if (!rr.total) rh += `<div>${t('randNone')}</div>`;
+  else if (!rr.fails) rh += `<div class="ok-t">✓ ${t('randAll', { n: rr.total })}</div>`;
+  else {
+    const ce = rr.ce, n = S.dim;
+    const lines = REL[k].split('').map(ch => `<b>${ch}</b> = ${fmtVec(ce[ch].slice(0, n))}`);
+    if (k >= 6 && k <= 9) lines.push(`<i>c</i> = ${fmt(ce.c)}` + (k === 8 || k === 9 ? `, <i>d</i> = ${fmt(ce.d)}` : ''));
+    rh += `<div class="bad-t">✗ ${t('randFail', { f: rr.fails, n: rr.total })}</div>
+           <div class="ce">${lines.join('<br>')}</div>
+           <button class="btn" id="loadCE">${t('loadCE')}</button>`;
+  }
+  $('#dRand').innerHTML = rh;
+  const btn = $('#loadCE');
+  if (btn) btn.onclick = () => {
+    const ce = rr.ce;
+    ['u', 'v', 'w'].forEach(ch => { ce[ch].forEach((x, i) => { S[ch][i] = x; }); });
+    S.c = ce.c; S.d = ce.d;
+    syncVecFields(); update();
+  };
+
+  const used = new Set(res.items.map(it => it.col));
+  const names = { u: '<b>u</b>', v: '<b>v</b>', w: '<b>w</b>' };
+  let lg = ['u', 'v', 'w'].filter(ch => used.has(ch)).map(ch => `<span><span class="sw" style="background:var(--c${ch})"></span>${names[ch]}</span>`).join('');
+  lg += `<span><span class="sw" style="background:var(--cl);height:6px"></span><span class="sw dash"></span>${t('legend')}</span>`;
+  if (o.hasCond && S.dim === 2) lg += `<span><span class="sw reg"></span>${t('shaded')}</span>`;
+  $('#legend').innerHTML = lg;
+}
+
+// ---------- canvas ----------
+function palette() {
+  const cs = getComputedStyle(document.documentElement), g = k => cs.getPropertyValue('--' + k).trim();
+  return { u: g('cu'), v: g('cv'), w: g('cw'), l: g('cl'), r: g('cr'), g: g('cg'),
+           grid: g('grid'), axis: g('axis'), text: g('text'), muted: g('muted'), panel: g('panel'), region: g('region') };
+}
+
+function niceStep(half) {
+  const raw = half / 6, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  for (const m of [1, 2, 5, 10]) if (m * p >= raw) return Math.max(0.5, m * p);
+  return 10 * p;
+}
+
+function drawCanvas() {
+  const cw = $('#cw'), cv = $('#cv');
+  const W = cw.clientWidth, H = cw.clientHeight, dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  HITS = [];
+  if (!LAST || !LAST.items) return;
+  if (S.dim === 2) render2D(ctx, W, H, LAST.items, LAST.ops);
+  else render3D(ctx, W, H, LAST.items);
+}
+
+function line(ctx, x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+
+function drawArrow(ctx, a, b, color, it) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+  ctx.save();
+  ctx.globalAlpha = it.alpha ?? 1;
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = it.w; ctx.lineCap = 'round';
+  if (!Number.isFinite(len)) { ctx.restore(); return null; }
+  if (len < 3) {
+    ctx.beginPath(); ctx.arc(b[0], b[1], it.dash ? 8 : 5.5, 0, Math.PI * 2);
+    if (it.dash) { ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.stroke(); } else ctx.fill();
+    ctx.restore();
+    return [0.7071, -0.7071];
+  }
+  const ux = dx / len, uy = dy / len, hl = Math.min(8 + it.w * 2.2, len * 0.45), hw = hl * 0.55;
+  const bx = b[0] - ux * hl, by = b[1] - uy * hl;
+  ctx.setLineDash(it.dash ? [7, 6] : []);
+  line(ctx, a[0], a[1], bx + ux, by + uy);
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(b[0], b[1]); ctx.lineTo(bx - uy * hw, by + ux * hw); ctx.lineTo(bx + uy * hw, by - ux * hw); ctx.closePath();
+  if (it.dash) { ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke(); } else ctx.fill();
+  ctx.restore();
+  return [ux, uy];
+}
+
+function drawLabel(ctx, placed, text, tip, dir, side, color, pal, W, H) {
+  ctx.font = '600 13px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+  const tw = ctx.measureText(text).width + 10, th = 20;
+  const nx = -dir[1] * side, ny = dir[0] * side;
+  // try spots around the tip until one does not overlap an earlier label
+  const cands = [];
+  for (const r of [16, 30, 46]) cands.push(
+    [dir[0] * r + nx * 12, dir[1] * r + ny * 12], [nx * r, ny * r],
+    [dir[0] * r - nx * 12, dir[1] * r - ny * 12], [-nx * r, -ny * r]);
+  const spot = ([ox, oy]) => [Math.max(2, Math.min(W - tw - 2, tip[0] + ox - tw / 2)), Math.max(2, Math.min(H - th - 2, tip[1] + oy - th / 2))];
+  const free = ([x, y]) => !placed.some(p => x < p.x + p.w && x + tw > p.x && y < p.y + p.h && y + th > p.y);
+  const [x, y] = cands.map(spot).find(free) || spot(cands[0]);
+  placed.push({ x, y, w: tw, h: th });
+  ctx.save();
+  ctx.globalAlpha = 0.88; ctx.fillStyle = pal.panel;
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, tw, th, 5) : ctx.rect(x, y, tw, th); ctx.fill();
+  ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + 5, y + th / 2 + 0.5);
+  ctx.restore();
+}
+
+function boundsOf(items, n) {
+  let m = 0;
+  for (const it of items) for (const p of [it.from, it.to]) for (let i = 0; i < n; i++) if (Number.isFinite(p[i])) m = Math.max(m, Math.abs(p[i]));
+  return m;
+}
+
+function drawItems(ctx, items, P, pal, W, H) {
+  const placed = [];
+  const labels = [];
+  for (const it of items) {
+    const a = P(it.from), b = P(it.to), color = pal[it.col];
+    const dir = drawArrow(ctx, a, b, color, it);
+    if (!dir) continue;
+    if (it.drag) HITS.push({ key: it.drag, x: b[0], y: b[1] });
+    if (!it.nolabel && it.tpl) labels.push({ text: fmtTpl(it.tpl, false, true), tip: b, dir, side: it.side || 1, color });
+  }
+  for (const L of labels) drawLabel(ctx, placed, L.text, L.tip, L.dir, L.side, L.color, pal, W, H);
+}
+
+function render2D(ctx, W, H, items, o) {
+  const pal = palette();
+  const R = Math.max(3, boundsOf(items, 2) * 1.2);
+  const sc = DRAG ? DRAG.sc : Math.min(W, H) / (2 * R);
+  const cx = W / 2, cy = H / 2;
+  VIEW2 = { sc, cx, cy };
+  const P = p => [cx + p[0] * sc, cy - p[1] * sc];
+
+  if (o.hasCond) {
+    ctx.fillStyle = pal.region;
+    const cell = 4, tol = 3 / sc;
+    for (let py = 0; py < H; py += cell) for (let px = 0; px < W; px += cell) {
+      const x = (px + cell / 2 - cx) / sc, y = (cy - py - cell / 2) / sc;
+      if (o.inV([x, y], tol)) ctx.fillRect(px, py, cell, cell);
+    }
+  }
+  const xmax = W / 2 / sc, ymax = H / 2 / sc, step = niceStep(Math.max(xmax, ymax));
+  ctx.strokeStyle = pal.grid; ctx.lineWidth = 1;
+  for (let k = Math.ceil(-xmax / step); k * step <= xmax; k++) line(ctx, cx + k * step * sc, 0, cx + k * step * sc, H);
+  for (let k = Math.ceil(-ymax / step); k * step <= ymax; k++) line(ctx, 0, cy - k * step * sc, W, cy - k * step * sc);
+  ctx.strokeStyle = pal.axis; ctx.lineWidth = 1.5;
+  line(ctx, 0, cy, W, cy); line(ctx, cx, 0, cx, H);
+  ctx.fillStyle = pal.muted; ctx.font = '11px Inter, system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  for (let k = Math.ceil(-xmax / step); k * step <= xmax; k++) if (k) ctx.fillText(fmt(k * step), cx + k * step * sc, cy + 14);
+  ctx.textAlign = 'right';
+  for (let k = Math.ceil(-ymax / step); k * step <= ymax; k++) if (k) ctx.fillText(fmt(k * step), cx - 5, cy - k * step * sc + 4);
+  ctx.textAlign = 'left';
+  drawItems(ctx, items, P, pal, W, H);
+}
+
+function render3D(ctx, W, H, items) {
+  const pal = palette();
+  const R = Math.max(3, boundsOf(items, 3) * 1.15);
+  const sc = Math.min(W, H) / (2.3 * R);
+  const cx = W / 2, cy = H / 2 + 10;
+  const cyw = Math.cos(S.view.yaw), syw = Math.sin(S.view.yaw), cp = Math.cos(S.view.pitch), sp = Math.sin(S.view.pitch);
+  const P = p => {
+    const x = p[0], y = p[1], z = p[2] || 0;
+    const x1 = x * cyw - y * syw, y1 = x * syw + y * cyw;
+    return [cx + x1 * sc, cy - (z * cp + y1 * sp) * sc];
+  };
+  const G = Math.floor(R);
+  ctx.strokeStyle = pal.grid; ctx.lineWidth = 1;
+  for (let k = -G; k <= G; k++) {
+    let a = P([k, -G, 0]), b = P([k, G, 0]); line(ctx, a[0], a[1], b[0], b[1]);
+    a = P([-G, k, 0]); b = P([G, k, 0]); line(ctx, a[0], a[1], b[0], b[1]);
+  }
+  ctx.strokeStyle = pal.axis; ctx.lineWidth = 1.5; ctx.fillStyle = pal.muted;
+  ctx.font = 'italic 600 14px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  [[1, 0, 0, 'x'], [0, 1, 0, 'y'], [0, 0, 1, 'z']].forEach(([ax, ay, az, name]) => {
+    const a = P([-ax * R, -ay * R, -az * R]), b = P([ax * R, ay * R, az * R]), l = P([ax * R * 1.08, ay * R * 1.08, az * R * 1.08]);
+    line(ctx, a[0], a[1], b[0], b[1]);
+    ctx.fillText(name, l[0], l[1]);
+  });
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  drawItems(ctx, items, P, pal, W, H);
+}
+
+// ---------- events ----------
+document.querySelector('aside').addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.f) {
+    if (el.dataset.f === 'cond') S.f.cond = el.value; else S.f[el.dataset.f][+el.dataset.i] = el.value;
+    if (S.preset !== 'custom') { S.preset = 'custom'; buildPresetSelect(); }
+    update();
+  } else if (el.dataset.vec || el.dataset.sc) {
+    let val;
+    try { val = evalNumber(el.value); } catch (err) { el.classList.add('bad'); return; }
+    el.classList.remove('bad');
+    if (el.dataset.vec) S[el.dataset.vec][+el.dataset.i] = val; else S[el.dataset.sc] = val;
+    update();
+  }
+});
+$('#preset').addEventListener('change', e => {
+  if (e.target.value === 'custom') return;
+  applyPreset(e.target.value);
+  buildPresetSelect(); buildFields(); update();
+});
+$('#dimSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const n = +b.dataset.dim; if (n === S.dim) return;
+  S.dim = n;
+  if (S.preset !== 'standard' && S.preset !== 'custom') { S.preset = 'custom'; buildPresetSelect(); }
+  buildFields(); update();
+});
+$('#themeBtn').addEventListener('click', () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  store.set('vse-theme', root.dataset.theme);
+  drawCanvas();
+});
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  S.sel = +b.dataset.k; update();
+});
+$('#randBtn').addEventListener('click', () => {
+  const o = buildOps(); if (Object.keys(o.errs).length) return;
+  const n = S.dim, base = [S.u, S.v, S.w].map(x => x.slice(0, n)), r = Math.random;
+  for (let tries = 0; tries < 4000; tries++) {
+    const vs = [sampleVec(r, n, tries % 2 ? base : null), sampleVec(r, n, base), sampleVec(r, n, tries % 2 ? base : null)];
+    if (vs.every(x => o.inV(x) && x.some(c => c !== 0))) {
+      ['u', 'v', 'w'].forEach((k, j) => { vs[j].forEach((x, i) => { S[k][i] = x; }); });
+      break;
+    }
+  }
+  const nz = SPOOL.filter(x => x !== 0);
+  S.c = pick(r, nz); S.d = pick(r, nz);
+  syncVecFields(); update();
+});
+
+const cv = $('#cv');
+cv.addEventListener('pointerdown', e => {
+  const rect = cv.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+  if (S.dim === 3) { ROT = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing'; return; }
+  let best = null, bd = e.pointerType === 'touch' ? 30 : 16;
+  for (const h of HITS) { const dd = Math.hypot(h.x - x, h.y - y); if (dd < bd) { bd = dd; best = h; } }
+  if (best && VIEW2) { DRAG = { key: best.key, sc: VIEW2.sc }; cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing'; }
+});
+cv.addEventListener('pointermove', e => {
+  const rect = cv.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+  if (ROT) {
+    S.view.yaw -= (e.clientX - ROT.x) * 0.01;
+    S.view.pitch = Math.max(-1.45, Math.min(1.45, S.view.pitch + (e.clientY - ROT.y) * 0.01));
+    ROT = { x: e.clientX, y: e.clientY };
+    drawCanvas(); return;
+  }
+  if (DRAG) {
+    const snap = e.shiftKey ? 10 : 2;
+    const wx = Math.round((x - VIEW2.cx) / VIEW2.sc * snap) / snap, wy = Math.round((VIEW2.cy - y) / VIEW2.sc * snap) / snap;
+    if (S[DRAG.key][0] !== wx || S[DRAG.key][1] !== wy) { S[DRAG.key][0] = wx; S[DRAG.key][1] = wy; syncVecFields(); update(); }
+    return;
+  }
+  if (S.dim === 3) { cv.style.cursor = 'grab'; return; }
+  cv.style.cursor = HITS.some(h => Math.hypot(h.x - x, h.y - y) < 16) ? 'grab' : 'default';
+});
+const endDrag = () => { if (DRAG || ROT) { DRAG = null; ROT = null; cv.style.cursor = 'default'; update(); } };
+cv.addEventListener('pointerup', endDrag);
+cv.addEventListener('pointercancel', endDrag);
+new ResizeObserver(() => drawCanvas()).observe($('#cw'));
+
+// ---------- start ----------
+const savedTheme = store.get('vse-theme');
+if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.dataset.theme = savedTheme;
+applyLang();
+buildPresetSelect();
+buildFields();
+update();
+</script>
+</body>
+</html>
