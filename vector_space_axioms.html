@@ -120,6 +120,15 @@ canvas { display:block; touch-action:none; }
 .ce { font:14px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--text); margin:6px 0 8px; line-height:1.6; }
 .ok-t { color:var(--ok); font-weight:600; } .bad-t { color:var(--bad); font-weight:600; }
 b { font-weight:700; }
+.exh, .proof h3 { margin:0 0 8px; font-size:14px; }
+.vizh { margin:0 0 12px; font-size:14px; }
+.viz { margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
+.proof p { margin:6px 0; }
+.pnote { color:var(--muted); font-size:13.5px; }
+.chain { display:grid; grid-template-columns:auto auto minmax(0,1fr); gap:6px 12px; align-items:baseline; margin:10px 0; padding:12px 14px; background:var(--panel2); border-radius:9px; overflow-x:auto; font-size:16px; }
+.chain .pe { white-space:nowrap; }
+.chain .pw { color:var(--muted); font-size:13px; }
+.qed { text-align:right; color:var(--muted); margin:0; }
 @media (max-width:1100px) { .dgrid { grid-template-columns:minmax(0,1fr); } }
 @media (max-width:900px) { .layout { grid-template-columns:minmax(0,1fr); } }
 @media (max-width:620px) {
@@ -129,6 +138,9 @@ b { font-weight:700; }
   header.top { flex-direction:column; }
   .canvasWrap { height:340px; }
   .stmt { font-size:19px; }
+  .chain { grid-template-columns:auto minmax(0,1fr); font-size:15px; }
+  .chain .pw { grid-column:2; margin-top:-4px; }
+  .chain .pe { white-space:normal; }
   h1 { font-size:22px; }
 }
 </style>
@@ -187,16 +199,20 @@ b { font-weight:700; }
             <div class="note" id="dNote"></div>
           </div>
         </div>
-        <div class="dgrid">
-          <div>
-            <div class="canvasWrap" id="cw"><canvas id="cv" aria-label="Plot of the vectors in this axiom"></canvas></div>
-            <div class="legend" id="legend"></div>
-          </div>
-          <div>
-            <div class="scal" id="dScal"></div>
-            <div id="dSteps"></div>
-            <div class="result" id="dResult"></div>
-            <div class="rand" id="dRand"></div>
+        <div class="proof" id="dProof"></div>
+        <div class="viz">
+          <h3 class="vizh" data-i18n="vizTitle"></h3>
+          <div class="dgrid">
+            <div>
+              <div class="canvasWrap" id="cw"><canvas id="cv" aria-label="Plot of the vectors in this axiom"></canvas></div>
+              <div class="legend" id="legend"></div>
+            </div>
+            <div>
+              <h3 class="exh" data-i18n="exTitle"></h3>
+              <div class="scal" id="dScal"></div>
+              <div id="dSteps"></div>
+              <div class="result" id="dResult"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -219,7 +235,7 @@ const T = {
     space: 'The set V', example: 'Example', customEdited: 'Custom (edited)', dimension: 'Dimension',
     operations: 'Operations', opAdd: 'Vector addition', opSmul: 'Scalar multiplication', opZero: 'Zero vector',
     opNeg: 'Additive inverse', opSet: 'Set condition', setPh: 'empty = all of ℝⁿ',
-    formulaHint: 'Variables: u1, u2, u3, v1, v2, v3 and c. In the set condition use x, y, z. Operators: + − * / ^, comparisons < <= > >= =, and, or. Functions: sqrt, abs, exp, ln, sin, cos.',
+    formulaHint: 'Variables: u₁, u₂, u₃, v₁, v₂, v₃ and c (typing u1 gives u₁). In the set condition use x, y, z. Operators: + − * / ^, comparisons < <= > >= =, and, or. Functions: sqrt, abs, exp, ln, sin, cos.',
     vectors: 'Vectors and scalars', random: 'Random',
     scalarHint: 'Fields accept expressions such as 1/2 or sqrt(2).',
     dragHint: 'Drag the arrow tips of u, v, w on the plot (hold Shift for finer steps).',
@@ -232,10 +248,17 @@ const T = {
     holds: 'The axiom holds for your inputs', fails: 'The axiom fails for your inputs',
     neq: 'left side ≠ right side', notin: '{x} ∉ V',
     inputsNotInV: '{list} not in V, so your inputs can’t test this axiom. Pick vectors in V or press Random.',
-    ceTitle: 'Counterexample', ceText: 'This axiom fails, for example, for:',
+    exTitle: 'Example with your vectors', proofTitle: 'Proof', vizTitle: 'Visualization',
+    proofNote: 'An example is not a proof. The argument below works for every <b>u</b>, <b>v</b>, <b>w</b> in <i>V</i> and every scalar <i>c</i>, <i>d</i>.',
+    noProof: 'No counterexample was found, but that is not a proof. For your own operations this axiom has to be proved by hand, for every <b>u</b>, <b>v</b>, <b>w</b> in <i>V</i> and every scalar <i>c</i>, <i>d</i>.',
+    ceTitle: 'One counterexample is enough', ceIntro: 'To show that an axiom fails, a single example where it fails is enough.',
+    ceOwn: 'Your vectors above are such an example.', ceText: 'For example, it fails for:',
     loadCE: 'Load this counterexample',
-    vAllT: 'Looks like a vector space', vAll: 'No axiom failed for these vectors and scalars. A proof still has to show each axiom for every u, v, w in V and every scalar c, d.',
-    vFailT: 'Not a vector space', vFail: 'Failing axioms: {list}. A single counterexample is enough.',
+    vSpaceT: 'V is a vector space',
+    vSpace: 'To show that V is a vector space, all 10 axioms must be proved for every u, v, w in V and every scalar c, d. Checking examples is not enough. Click an axiom to see its proof.',
+    vNoCET: 'No counterexample found',
+    vNoCE: 'That is not a proof. To show that V is a vector space, all 10 axioms must be proved for every u, v, w in V and every scalar c, d. Proofs are written out only for the built-in examples.',
+    vFailT: 'Not a vector space', vFail: 'Failing axioms: {list}. One counterexample is enough to show that V is not a vector space.',
     vUnkT: 'Not enough to decide', vUnk: 'Some axioms could not be tested. Choose vectors that belong to V.',
     errFix: 'Fix the formula errors in the Operations panel.', errT: 'Formula error',
     errChar: 'Unexpected character “{ch}”', errName: 'Unknown name “{name}”', errEnd: 'The expression ends too early',
@@ -296,8 +319,11 @@ const FUNCS = { sqrt: Math.sqrt, abs: Math.abs, exp: Math.exp, ln: Math.log, log
 const CONSTS = { pi: Math.PI, e: Math.E };
 const CMP = ['<', '<=', '>', '>=', '==', '!='];
 
+const toSub = str => String(str).replace(/([uvx])([0-9])/g, (m, a, b) => a + String.fromCharCode(8320 + Number(b)));
+const fromSub = str => String(str).replace(/[₀-₉]/g, ch => String(ch.charCodeAt(0) - 8320));
+
 function compile(src, vars) {
-  src = String(src);
+  src = fromSub(src);
   const toks = [], re = /\s*(\d*\.\d+|\d+\.?\d*|[A-Za-z_]\w*|<=|>=|==|!=|&&|\|\||[-+*\/^(),<>=≤≥·×−])/y;
   let i = 0;
   while (!/^\s*$/.test(src.slice(i))) {
@@ -425,7 +451,7 @@ function buildOps() {
       for (let i = 0; i < n; i++) { e[['x', 'y', 'z'][i]] = a[i]; e['x' + (i + 1)] = a[i]; }
       return !!cond(e);
     },
-    std: ['add', 'smul', 'zero', 'neg'].every(key => range(n).every(i => S.f[key][i].replace(/\s/g, '') === STD[key][i])),
+    std: ['add', 'smul', 'zero', 'neg'].every(key => range(n).every(i => fromSub(S.f[key][i]).replace(/\s/g, '') === STD[key][i])),
     hasCond: !!cond
   };
 }
@@ -558,6 +584,109 @@ function evalAxiom(k, o, u, v, w, c, d, withDraw) {
   return { steps, items, pass, reasons };
 }
 
+// ---------- proofs (written out for the built-in examples) ----------
+const HOLDS = { standard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], line: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], line1: [2, 3, 7, 8, 9, 10],
+                flatten: [1, 2, 3, 4, 5, 6, 7, 8, 9], shifted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], posmul: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] };
+
+function proofFor(k, n, o) {
+  if (!(HOLDS[S.preset] || []).includes(k)) return null;
+  const P = o.std ? '+' : '⊕';
+  const F = tpl => fmtTpl(tpl, true), B = x => `<b>${x}</b>`, c = '<i>c</i>', d = '<i>d</i>';
+  const sb = (x, i) => `<i>${x}</i><sub>${i}</sub>`, u = i => sb('u', i), v = i => sb('v', i), w = i => sb('w', i);
+  const tup = f => '(' + range(n).map(i => f(i + 1)).join(', ') + ')';
+  const chain = (start, rows) => ({ type: 'chain', start, rows });
+  const text = html => ({ type: 'text', html });
+  const Rn = `ℝ<sup>${n}</sup>`;
+  const scal = k === 6 || k === 7 ? ` and let ${c} be a real number` : k === 8 || k === 9 ? ` and let ${c}, ${d} be real numbers` : '';
+  const letV = (extra = '') => text('Let ' + REL[k].split('').map(x => `${B(x)} = ${tup(i => sb(x, i))}`).join(', ') +
+    ` be in <i>V</i>${extra}${scal}.`);
+  const dSM = 'definition of scalar multiplication', dSMc = 'definition of ⊙';
+  const dA = `definition of ${P}`;
+
+  // usual componentwise operations
+  const STDCH = {
+    1: () => chain(F('u+v'), [[tup(i => `${u(i)} + ${v(i)}`), dA]]),
+    2: () => chain(F('u+v'), [[tup(i => `${u(i)} + ${v(i)}`), dA], [tup(i => `${v(i)} + ${u(i)}`), 'addition of real numbers is commutative'], [F('v+u'), dA]]),
+    3: () => chain(F('(u+v)+w'), [[tup(i => `(${u(i)} + ${v(i)}) + ${w(i)}`), dA], [tup(i => `${u(i)} + (${v(i)} + ${w(i)})`), 'addition of real numbers is associative'], [F('u+(v+w)'), dA]]),
+    4: () => chain(F('u+O'), [[tup(i => `${u(i)} + 0`), dA], [tup(u), '0 is the identity of real addition'], [B('u'), '']]),
+    5: () => chain(F('u+(~u)'), [[tup(i => `${u(i)} + (−${u(i)})`), `${dA} and of −${B('u')}`], [tup(() => '0'), ''], [B('0'), '']]),
+    6: () => chain(F('c.u'), [[tup(i => `${c}${u(i)}`), dSM]]),
+    7: () => chain(F('c.(u+v)'), [[tup(i => `${c}(${u(i)} + ${v(i)})`), `${dA} and ${dSM}`], [tup(i => `${c}${u(i)} + ${c}${v(i)}`), 'distributive law for real numbers'], [F('c.u+c.v'), `${dA} and ${dSM}`]]),
+    8: () => chain(F('(c&d).u'), [[tup(i => `(${c} + ${d})${u(i)}`), dSM], [tup(i => `${c}${u(i)} + ${d}${u(i)}`), 'distributive law for real numbers'], [F('c.u+d.u'), `${dA} and ${dSM}`]]),
+    9: () => chain(F('c.(d.u)'), [[tup(i => `${c}(${d}${u(i)})`), `${dSM} (twice)`], [tup(i => `(${c}${d})${u(i)}`), 'multiplication of real numbers is associative'], [F('(cd).u'), dSM]]),
+    10: () => chain(F('1.u'), [[tup(i => `1 · ${u(i)}`), dSM], [tup(u), ''], [B('u'), '']])
+  };
+  const same = 'Vectors of <i>V</i> are vectors of ℝ<sup>2</sup> and the operations are the usual ones, so the computation is the same as in ℝ<sup>2</sup>:';
+
+  switch (S.preset) {
+    case 'standard':
+      if (k === 1) return [letV(), STDCH[1](), text(`Every component is a real number, so ${F('u+v')} ∈ ${Rn}.`)];
+      if (k === 4) return [letV(), text(`The zero vector is ${B('0')} = ${tup(() => '0')}.`), STDCH[4]()];
+      if (k === 5) return [letV(), text(`The negative of ${B('u')} is −${B('u')} = ${tup(i => '−' + u(i))}.`), STDCH[5]()];
+      if (k === 6) return [letV(), STDCH[6](), text(`Every component is a real number, so ${F('c.u')} ∈ ${Rn}.`)];
+      return [letV(), STDCH[k]()];
+    case 'line':
+    case 'line1': {
+      const on = ` (so ${REL[k].split('').map(x => `${sb(x, 2)} = 2${sb(x, 1)}`).join(', ')})`;
+      if (k === 1) return [letV(on), STDCH[1](), text(`Then ${u(2)} + ${v(2)} = 2${u(1)} + 2${v(1)} = 2(${u(1)} + ${v(1)}): the second component is twice the first, so ${F('u+v')} ∈ <i>V</i>.`)];
+      if (k === 4) return [letV(on), text(`${B('0')} = (0, 0) and 0 = 2 · 0, so ${B('0')} ∈ <i>V</i>.`), STDCH[4]()];
+      if (k === 5) return [letV(on), text(`−${B('u')} = (−${u(1)}, −${u(2)}) and −${u(2)} = −2${u(1)} = 2(−${u(1)}), so −${B('u')} ∈ <i>V</i>.`), STDCH[5]()];
+      if (k === 6) return [letV(on), STDCH[6](), text(`Then ${c}${u(2)} = ${c}(2${u(1)}) = 2(${c}${u(1)}): the second component is twice the first, so ${F('c.u')} ∈ <i>V</i>.`)];
+      return [letV(), text(same), STDCH[k]()];
+    }
+    case 'flatten':
+      if (k === 1) return [letV(), STDCH[1](), text(`Every component is a real number, so ${F('u+v')} ∈ ℝ<sup>2</sup>.`)];
+      if (k === 4) return [letV(), text(`The zero vector is ${B('0')} = (0, 0).`), STDCH[4]()];
+      if (k === 5) return [letV(), text(`The negative of ${B('u')} is −${B('u')} = (−${u(1)}, −${u(2)}).`), STDCH[5]()];
+      if (k === 6) return [letV(), chain(F('c.u'), [[`(${c}${u(1)}, 0)`, dSMc]]), text(`Both components are real numbers, so ${F('c.u')} ∈ ℝ<sup>2</sup>.`)];
+      if (k === 7) return [letV(), chain(F('c.(u+v)'), [[`(${c}(${u(1)} + ${v(1)}), 0)`, `${dA} and ${dSMc}`], [`(${c}${u(1)} + ${c}${v(1)}, 0 + 0)`, 'distributive law for real numbers'], [`(${c}${u(1)}, 0) ⊕ (${c}${v(1)}, 0)`, dA], [F('c.u+c.v'), dSMc]])];
+      if (k === 8) return [letV(), chain(F('(c&d).u'), [[`((${c} + ${d})${u(1)}, 0)`, dSMc], [`(${c}${u(1)} + ${d}${u(1)}, 0 + 0)`, 'distributive law for real numbers'], [`(${c}${u(1)}, 0) ⊕ (${d}${u(1)}, 0)`, dA], [F('c.u+d.u'), dSMc]])];
+      if (k === 9) return [letV(), chain(F('c.(d.u)'), [[`${c} ⊙ (${d}${u(1)}, 0)`, dSMc], [`(${c}(${d}${u(1)}), 0)`, dSMc], [`((${c}${d})${u(1)}, 0)`, 'multiplication of real numbers is associative'], [F('(cd).u'), dSMc]])];
+      return [letV(), STDCH[k]()];
+    case 'shifted': {
+      const T2 = f => `(${f(1)}, ${f(2)})`;
+      switch (k) {
+        case 1: return [letV(), chain(F('u+v'), [[T2(i => `${u(i)} + ${v(i)} + 1`), dA]]), text(`Every component is a real number, so ${F('u+v')} ∈ ℝ<sup>2</sup>.`)];
+        case 2: return [letV(), chain(F('u+v'), [[T2(i => `${u(i)} + ${v(i)} + 1`), dA], [T2(i => `${v(i)} + ${u(i)} + 1`), 'addition of real numbers is commutative'], [F('v+u'), dA]])];
+        case 3: return [letV(), chain(F('(u+v)+w'), [[T2(i => `(${u(i)} + ${v(i)} + 1) + ${w(i)} + 1`), `${dA} (twice)`], [T2(i => `${u(i)} + ${v(i)} + ${w(i)} + 2`), 'simplify'], [T2(i => `${u(i)} + (${v(i)} + ${w(i)} + 1) + 1`), 'regroup'], [F('u+(v+w)'), `${dA} (twice)`]])];
+        case 4: return [letV(), text(`The zero vector is ${B('0')} = (−1, −1).`), chain(F('u+O'), [[T2(i => `${u(i)} + (−1) + 1`), dA], [T2(u), ''], [B('u'), '']])];
+        case 5: return [letV(), text(`The negative of ${B('u')} is −${B('u')} = (−${u(1)} − 2, −${u(2)} − 2).`), chain(F('u+(~u)'), [[T2(i => `${u(i)} + (−${u(i)} − 2) + 1`), dA], ['(−1, −1)', ''], [B('0'), '']])];
+        case 6: return [letV(), chain(F('c.u'), [[T2(i => `${c}${u(i)} + ${c} − 1`), dSMc]]), text(`Every component is a real number, so ${F('c.u')} ∈ ℝ<sup>2</sup>.`)];
+        case 7: return [letV(), chain(F('c.(u+v)'), [[T2(i => `${c}(${u(i)} + ${v(i)} + 1) + ${c} − 1`), `${dA} and ${dSMc}`], [T2(i => `${c}${u(i)} + ${c}${v(i)} + 2${c} − 1`), 'expand'], [T2(i => `(${c}${u(i)} + ${c} − 1) + (${c}${v(i)} + ${c} − 1) + 1`), 'regroup'], [F('c.u+c.v'), `${dA} and ${dSMc}`]])];
+        case 8: return [letV(), chain(F('(c&d).u'), [[T2(i => `(${c} + ${d})${u(i)} + (${c} + ${d}) − 1`), dSMc], [T2(i => `(${c}${u(i)} + ${c} − 1) + (${d}${u(i)} + ${d} − 1) + 1`), 'regroup'], [F('c.u+d.u'), `${dA} and ${dSMc}`]])];
+        case 9: return [letV(), chain(F('c.(d.u)'), [[T2(i => `${c}(${d}${u(i)} + ${d} − 1) + ${c} − 1`), `${dSMc} (twice)`], [T2(i => `${c}${d}${u(i)} + ${c}${d} − 1`), 'expand: −' + c + ' and +' + c + ' cancel'], [F('(cd).u'), dSMc]])];
+        case 10: return [letV(), chain(F('1.u'), [[T2(i => `1 · ${u(i)} + 1 − 1`), dSMc], [T2(u), ''], [B('u'), '']])];
+      }
+      return null;
+    }
+    case 'posmul': {
+      const T2 = f => `(${f(1)}, ${f(2)})`, pos = ` (so ${REL[k].split('').map(x => `${sb(x, 1)}, ${sb(x, 2)} > 0`).join('; ')})`;
+      switch (k) {
+        case 1: return [letV(pos), chain(F('u+v'), [[T2(i => `${u(i)}${v(i)}`), dA]]), text(`A product of positive numbers is positive, so ${F('u+v')} ∈ <i>V</i>.`)];
+        case 2: return [letV(pos), chain(F('u+v'), [[T2(i => `${u(i)}${v(i)}`), dA], [T2(i => `${v(i)}${u(i)}`), 'multiplication of real numbers is commutative'], [F('v+u'), dA]])];
+        case 3: return [letV(pos), chain(F('(u+v)+w'), [[T2(i => `(${u(i)}${v(i)})${w(i)}`), `${dA} (twice)`], [T2(i => `${u(i)}(${v(i)}${w(i)})`), 'multiplication of real numbers is associative'], [F('u+(v+w)'), `${dA} (twice)`]])];
+        case 4: return [letV(pos), text(`The zero vector is ${B('0')} = (1, 1), and 1 > 0, so ${B('0')} ∈ <i>V</i>.`), chain(F('u+O'), [[T2(i => `${u(i)} · 1`), dA], [T2(u), ''], [B('u'), '']])];
+        case 5: return [letV(pos), text(`The negative of ${B('u')} is −${B('u')} = (1/${u(1)}, 1/${u(2)}). Since ${u(1)}, ${u(2)} > 0, also 1/${u(1)}, 1/${u(2)} > 0, so −${B('u')} ∈ <i>V</i>.`), chain(F('u+(~u)'), [[T2(i => `${u(i)} · 1/${u(i)}`), dA], ['(1, 1)', ''], [B('0'), '']])];
+        case 6: return [letV(pos), chain(F('c.u'), [[T2(i => `${u(i)}<sup><i>c</i></sup>`), dSMc]]), text(`A positive number raised to any real power is positive, so ${F('c.u')} ∈ <i>V</i>.`)];
+        case 7: return [letV(pos), chain(F('c.(u+v)'), [[T2(i => `(${u(i)}${v(i)})<sup><i>c</i></sup>`), `${dA} and ${dSMc}`], [T2(i => `${u(i)}<sup><i>c</i></sup>${v(i)}<sup><i>c</i></sup>`), '(<i>ab</i>)<sup><i>c</i></sup> = <i>a</i><sup><i>c</i></sup><i>b</i><sup><i>c</i></sup>'], [F('c.u+c.v'), `${dA} and ${dSMc}`]])];
+        case 8: return [letV(pos), chain(F('(c&d).u'), [[T2(i => `${u(i)}<sup><i>c</i>+<i>d</i></sup>`), dSMc], [T2(i => `${u(i)}<sup><i>c</i></sup>${u(i)}<sup><i>d</i></sup>`), '<i>a</i><sup><i>c</i>+<i>d</i></sup> = <i>a</i><sup><i>c</i></sup><i>a</i><sup><i>d</i></sup>'], [F('c.u+d.u'), `${dA} and ${dSMc}`]])];
+        case 9: return [letV(pos), chain(F('c.(d.u)'), [[T2(i => `(${u(i)}<sup><i>d</i></sup>)<sup><i>c</i></sup>`), `${dSMc} (twice)`], [T2(i => `${u(i)}<sup><i>cd</i></sup>`), '(<i>a</i><sup><i>d</i></sup>)<sup><i>c</i></sup> = <i>a</i><sup><i>cd</i></sup>'], [F('(cd).u'), dSMc]])];
+        case 10: return [letV(pos), chain(F('1.u'), [[T2(i => `${u(i)}<sup>1</sup>`), dSMc], [T2(u), ''], [B('u'), '']])];
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
+function renderProof(blocks) {
+  return blocks.map(b => {
+    if (b.type === 'text') return `<p>${b.html}</p>`;
+    return '<div class="chain">' + b.rows.map((r, j) =>
+      `<span class="pe">${j ? '' : b.start}</span><span class="pe">= ${r[0]}</span><span class="pw">${r[1] ? '(' + r[1] + ')' : ''}</span>`).join('') + '</div>';
+  }).join('') + '<p class="qed">∎</p>';
+}
+
 // ---------- random tests ----------
 function rng(seed) {
   return function () {
@@ -613,7 +742,7 @@ function buildPresetSelect() {
 function buildFields() {
   const n = S.dim;
   const comps = key => '( ' + range(n).map(i =>
-    `<input type="text" spellcheck="false" autocomplete="off" data-f="${key}" data-i="${i}" value="${S.f[key][i]}">`).join(' , ') + ' )';
+    `<input type="text" spellcheck="false" autocomplete="off" data-f="${key}" data-i="${i}" value="${toSub(S.f[key][i])}">`).join(' , ') + ' )';
   const vars = n === 2 ? '(x, y)' : '(x, y, z)';
   $('#opsFields').innerHTML = `
     <div class="frow"><div class="flabel">${t('opAdd')} <span class="sym">u ⊕ v =</span></div><div class="comps">${comps('add')}</div><div class="ferr" id="err-add"></div></div>
@@ -621,7 +750,7 @@ function buildFields() {
     <div class="frow"><div class="flabel">${t('opZero')} <span class="sym">0 =</span></div><div class="comps">${comps('zero')}</div><div class="ferr" id="err-zero"></div></div>
     <div class="frow"><div class="flabel">${t('opNeg')} <span class="sym">−u =</span></div><div class="comps">${comps('neg')}</div><div class="ferr" id="err-neg"></div></div>
     <div class="frow"><div class="flabel">${t('opSet')} <span class="sym">V = { ${vars} :</span></div>
-      <div class="comps"><input type="text" spellcheck="false" autocomplete="off" data-f="cond" value="${S.f.cond.replace(/"/g, '&quot;')}" placeholder="${t('setPh')}"> }</div>
+      <div class="comps"><input type="text" spellcheck="false" autocomplete="off" data-f="cond" value="${toSub(S.f.cond).replace(/"/g, '&quot;')}" placeholder="${t('setPh')}"> }</div>
       <div class="ferr" id="err-cond"></div></div>`;
 
   const vrow = name => `<div class="vrow"><span class="vname ${name}">${name}</span> = ( ` +
@@ -687,8 +816,10 @@ function update() {
     const notIn = REL[k].split('').filter(ch => !o.inV(vecs[ch]));
     const rr = rand[k];
     res.notIn = notIn;
+    res.proof = proofFor(k, n, o);
     results[k] = res;
-    status[k] = ((!notIn.length && !res.pass) || rr.fails > 0) ? 'fail' : (!notIn.length || rr.total > 0) ? 'pass' : 'unk';
+    status[k] = res.proof ? 'pass'
+      : ((!notIn.length && !res.pass) || rr.fails > 0) ? 'fail' : (!notIn.length || rr.total > 0) ? 'pass' : 'unk';
   }
   LAST.items = results[S.sel].items;
 
@@ -702,9 +833,12 @@ function update() {
   } else if (unknown.length) {
     vEl.className = 'card verdict unk';
     vEl.innerHTML = `<div class="vicon">?</div><div><h2>${t('vUnkT')}</h2><p>${t('vUnk')}</p></div>`;
-  } else {
+  } else if (range(10).every(i => results[i + 1].proof)) {
     vEl.className = 'card verdict pass';
-    vEl.innerHTML = `<div class="vicon">✓</div><div><h2>${t('vAllT')}</h2><p>${t('vAll')}</p></div>`;
+    vEl.innerHTML = `<div class="vicon">✓</div><div><h2>${t('vSpaceT')}</h2><p>${t('vSpace')}</p></div>`;
+  } else {
+    vEl.className = 'card verdict unk';
+    vEl.innerHTML = `<div class="vicon">?</div><div><h2>${t('vNoCET')}</h2><p>${t('vNoCE')}</p></div>`;
   }
 
   // chips
@@ -716,11 +850,11 @@ function update() {
     `<div><div class="gtitle">${t('groupAdd')}</div><div class="chips">${[1, 2, 3, 4, 5].map(chip).join('')}</div></div>
      <div><div class="gtitle">${t('groupMul')}</div><div class="chips">${[6, 7, 8, 9, 10].map(chip).join('')}</div></div>`;
 
-  renderDetail(S.sel, results[S.sel], rand[S.sel], o, { c, d });
+  renderDetail(S.sel, results[S.sel], rand[S.sel], o, { c, d }, status[S.sel]);
   drawCanvas();
 }
 
-function renderDetail(k, res, rr, o, sc) {
+function renderDetail(k, res, rr, o, sc, status) {
   $('#dNum').textContent = k;
   $('#dName').textContent = `${t('axiom')} ${k} · ${T.en.names[k - 1]}`;
   $('#dStmt').innerHTML = fmtTpl(STMT[k], true);
@@ -757,19 +891,24 @@ function renderDetail(k, res, rr, o, sc) {
     rEl.innerHTML = `✗ ${t('fails')}: ${why}`;
   }
 
-  // a counterexample is shown only when the axiom fails and the user's own inputs don't already show it
-  let rh = '';
-  if (rr.fails && (res.notIn.length || res.pass)) {
-    const ce = rr.ce, n = S.dim;
-    const lines = REL[k].split('').map(ch => `<b>${ch}</b> = ${fmtVec(ce[ch].slice(0, n))}`);
-    if (k >= 6 && k <= 9) lines.push(`<i>c</i> = ${fmt(ce.c)}` + (k === 8 || k === 9 ? `, <i>d</i> = ${fmt(ce.d)}` : ''));
-    rh = `<h3>${t('ceTitle')}</h3>
-          <div class="bad-t">✗ ${t('ceText')}</div>
-          <div class="ce">${lines.join('<br>')}</div>
-          <button class="btn" id="loadCE">${t('loadCE')}</button>`;
+  let ph = '';
+  if (status === 'pass' && res.proof) {
+    ph = `<h3>${t('proofTitle')}</h3><p class="pnote">${t('proofNote')}</p>` + renderProof(res.proof);
+  } else if (status === 'pass') {
+    ph = `<h3>${t('proofTitle')}</h3><p class="pnote">${t('noProof')}</p>`;
+  } else if (status === 'fail') {
+    ph = `<h3>${t('ceTitle')}</h3><p class="pnote">${t('ceIntro')}</p>`;
+    if (!res.notIn.length && !res.pass) ph += `<p class="bad-t">✗ ${t('ceOwn')}</p>`;
+    else if (rr.ce) {
+      const ce = rr.ce, n = S.dim;
+      const lines = REL[k].split('').map(ch => `<b>${ch}</b> = ${fmtVec(ce[ch].slice(0, n))}`);
+      if (k >= 6 && k <= 9) lines.push(`<i>c</i> = ${fmt(ce.c)}` + (k === 8 || k === 9 ? `, <i>d</i> = ${fmt(ce.d)}` : ''));
+      ph += `<div class="bad-t">✗ ${t('ceText')}</div><div class="ce">${lines.join('<br>')}</div>
+             <button class="btn" id="loadCE">${t('loadCE')}</button>`;
+    }
   }
-  $('#dRand').innerHTML = rh;
-  $('#dRand').style.display = rh ? '' : 'none';
+  $('#dProof').innerHTML = ph;
+  $('#dProof').style.display = ph ? '' : 'none';
   const btn = $('#loadCE');
   if (btn) btn.onclick = () => {
     const ce = rr.ce;
@@ -941,6 +1080,8 @@ function render3D(ctx, W, H, items) {
 document.querySelector('aside').addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.f) {
+    const sub = toSub(el.value);   // same length, so the cursor can stay where it was
+    if (sub !== el.value) { const pos = el.selectionStart; el.value = sub; el.setSelectionRange(pos, pos); }
     if (el.dataset.f === 'cond') S.f.cond = el.value; else S.f[el.dataset.f][+el.dataset.i] = el.value;
     if (S.preset !== 'custom') { S.preset = 'custom'; buildPresetSelect(); }
     update();
