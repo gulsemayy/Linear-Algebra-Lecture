@@ -288,6 +288,10 @@ const PRESETS = [
     name: 'Line not through the origin: y = 2x + 1',
     desc: 'Usual operations on the points of the line y = 2x + 1.',
     f: { cond: 'y = 2x + 1' }, inputs: { u: [0, 1], v: [1, 3], w: [-1, -1], c: 2, d: -1 } },
+  { id: 'quadrant',
+    name: 'First-quadrant vectors: x ≥ 0, y ≥ 0',
+    desc: 'Usual operations, but V contains only the vectors (x, y) with x ≥ 0 and y ≥ 0.',
+    f: { cond: 'x >= 0 and y >= 0' }, inputs: { u: [2, 1], v: [1, 3], w: [3, 0.5], c: -1, d: 2 } },
   { id: 'flatten',
     name: 'ℝ² with c ⊙ (x, y) = (cx, 0)',
     desc: 'Usual addition; scalar multiplication drops the second component.',
@@ -296,12 +300,7 @@ const PRESETS = [
     name: 'ℝ² with shifted operations',
     desc: 'u ⊕ v = (u₁+v₁+1, u₂+v₂+1) and c ⊙ u = (cu₁+c−1, cu₂+c−1). The zero vector is (−1, −1).',
     f: { add: ['u1+v1+1', 'u2+v2+1'], smul: ['c*u1+c-1', 'c*u2+c-1'], zero: ['-1', '-1'], neg: ['-u1-2', '-u2-2'] },
-    inputs: { u: [2, 1], v: [-1, 2], w: [1, -2], c: 2, d: -1 } },
-  { id: 'posmul',
-    name: 'Positive quadrant, multiplication as addition',
-    desc: 'On x > 0, y > 0: u ⊕ v = (u₁v₁, u₂v₂) and c ⊙ u = (u₁ᶜ, u₂ᶜ). The zero vector is (1, 1).',
-    f: { add: ['u1*v1', 'u2*v2'], smul: ['u1^c', 'u2^c'], zero: ['1', '1'], neg: ['1/u1', '1/u2'], cond: 'x > 0 and y > 0' },
-    inputs: { u: [2, 3], v: [0.5, 2], w: [4, 1], c: 2, d: -1 } }
+    inputs: { u: [2, 1], v: [-1, 2], w: [1, -2], c: 2, d: -1 } }
 ];
 
 // ---------- state ----------
@@ -586,7 +585,8 @@ function evalAxiom(k, o, u, v, w, c, d, withDraw) {
 
 // ---------- proofs (written out for the built-in examples) ----------
 const HOLDS = { standard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], line: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], line1: [2, 3, 7, 8, 9, 10],
-                flatten: [1, 2, 3, 4, 5, 6, 7, 8, 9], shifted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], posmul: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] };
+                quadrant: [1, 2, 3, 4, 7, 8, 9, 10],
+                flatten: [1, 2, 3, 4, 5, 6, 7, 8, 9], shifted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] };
 
 function proofFor(k, n, o) {
   if (!(HOLDS[S.preset] || []).includes(k)) return null;
@@ -634,6 +634,12 @@ function proofFor(k, n, o) {
       if (k === 6) return [letV(on), STDCH[6](), text(`Then ${c}${u(2)} = ${c}(2${u(1)}) = 2(${c}${u(1)}): the second component is twice the first, so ${F('c.u')} ∈ <i>V</i>.`)];
       return [letV(), text(same), STDCH[k]()];
     }
+    case 'quadrant': {
+      const nn = ` (so ${REL[k].split('').map(x => `${sb(x, 1)}, ${sb(x, 2)} ≥ 0`).join('; ')})`;
+      if (k === 1) return [letV(nn), STDCH[1](), text(`A sum of non-negative numbers is non-negative, so ${F('u+v')} ∈ <i>V</i>.`)];
+      if (k === 4) return [letV(), text(`${B('0')} = (0, 0) and 0 ≥ 0, so ${B('0')} ∈ <i>V</i>.`), STDCH[4]()];
+      return [letV(), text(same), STDCH[k]()];
+    }
     case 'flatten':
       if (k === 1) return [letV(), STDCH[1](), text(`Every component is a real number, so ${F('u+v')} ∈ ℝ<sup>2</sup>.`)];
       if (k === 4) return [letV(), text(`The zero vector is ${B('0')} = (0, 0).`), STDCH[4]()];
@@ -656,22 +662,6 @@ function proofFor(k, n, o) {
         case 8: return [letV(), chain(F('(c&d).u'), [[T2(i => `(${c} + ${d})${u(i)} + (${c} + ${d}) − 1`), dSMc], [T2(i => `(${c}${u(i)} + ${c} − 1) + (${d}${u(i)} + ${d} − 1) + 1`), 'regroup'], [F('c.u+d.u'), `${dA} and ${dSMc}`]])];
         case 9: return [letV(), chain(F('c.(d.u)'), [[T2(i => `${c}(${d}${u(i)} + ${d} − 1) + ${c} − 1`), `${dSMc} (twice)`], [T2(i => `${c}${d}${u(i)} + ${c}${d} − 1`), 'expand: −' + c + ' and +' + c + ' cancel'], [F('(cd).u'), dSMc]])];
         case 10: return [letV(), chain(F('1.u'), [[T2(i => `1 · ${u(i)} + 1 − 1`), dSMc], [T2(u), ''], [B('u'), '']])];
-      }
-      return null;
-    }
-    case 'posmul': {
-      const T2 = f => `(${f(1)}, ${f(2)})`, pos = ` (so ${REL[k].split('').map(x => `${sb(x, 1)}, ${sb(x, 2)} > 0`).join('; ')})`;
-      switch (k) {
-        case 1: return [letV(pos), chain(F('u+v'), [[T2(i => `${u(i)}${v(i)}`), dA]]), text(`A product of positive numbers is positive, so ${F('u+v')} ∈ <i>V</i>.`)];
-        case 2: return [letV(pos), chain(F('u+v'), [[T2(i => `${u(i)}${v(i)}`), dA], [T2(i => `${v(i)}${u(i)}`), 'multiplication of real numbers is commutative'], [F('v+u'), dA]])];
-        case 3: return [letV(pos), chain(F('(u+v)+w'), [[T2(i => `(${u(i)}${v(i)})${w(i)}`), `${dA} (twice)`], [T2(i => `${u(i)}(${v(i)}${w(i)})`), 'multiplication of real numbers is associative'], [F('u+(v+w)'), `${dA} (twice)`]])];
-        case 4: return [letV(pos), text(`The zero vector is ${B('0')} = (1, 1), and 1 > 0, so ${B('0')} ∈ <i>V</i>.`), chain(F('u+O'), [[T2(i => `${u(i)} · 1`), dA], [T2(u), ''], [B('u'), '']])];
-        case 5: return [letV(pos), text(`The negative of ${B('u')} is −${B('u')} = (1/${u(1)}, 1/${u(2)}). Since ${u(1)}, ${u(2)} > 0, also 1/${u(1)}, 1/${u(2)} > 0, so −${B('u')} ∈ <i>V</i>.`), chain(F('u+(~u)'), [[T2(i => `${u(i)} · 1/${u(i)}`), dA], ['(1, 1)', ''], [B('0'), '']])];
-        case 6: return [letV(pos), chain(F('c.u'), [[T2(i => `${u(i)}<sup><i>c</i></sup>`), dSMc]]), text(`A positive number raised to any real power is positive, so ${F('c.u')} ∈ <i>V</i>.`)];
-        case 7: return [letV(pos), chain(F('c.(u+v)'), [[T2(i => `(${u(i)}${v(i)})<sup><i>c</i></sup>`), `${dA} and ${dSMc}`], [T2(i => `${u(i)}<sup><i>c</i></sup>${v(i)}<sup><i>c</i></sup>`), '(<i>ab</i>)<sup><i>c</i></sup> = <i>a</i><sup><i>c</i></sup><i>b</i><sup><i>c</i></sup>'], [F('c.u+c.v'), `${dA} and ${dSMc}`]])];
-        case 8: return [letV(pos), chain(F('(c&d).u'), [[T2(i => `${u(i)}<sup><i>c</i>+<i>d</i></sup>`), dSMc], [T2(i => `${u(i)}<sup><i>c</i></sup>${u(i)}<sup><i>d</i></sup>`), '<i>a</i><sup><i>c</i>+<i>d</i></sup> = <i>a</i><sup><i>c</i></sup><i>a</i><sup><i>d</i></sup>'], [F('c.u+d.u'), `${dA} and ${dSMc}`]])];
-        case 9: return [letV(pos), chain(F('c.(d.u)'), [[T2(i => `(${u(i)}<sup><i>d</i></sup>)<sup><i>c</i></sup>`), `${dSMc} (twice)`], [T2(i => `${u(i)}<sup><i>cd</i></sup>`), '(<i>a</i><sup><i>d</i></sup>)<sup><i>c</i></sup> = <i>a</i><sup><i>cd</i></sup>'], [F('(cd).u'), dSMc]])];
-        case 10: return [letV(pos), chain(F('1.u'), [[T2(i => `${u(i)}<sup>1</sup>`), dSMc], [T2(u), ''], [B('u'), '']])];
       }
       return null;
     }
